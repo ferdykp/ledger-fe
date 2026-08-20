@@ -1,0 +1,134 @@
+/* ledger-web/src/style.css */
+@import "tailwindcss";
+
+/* 1. Mendaftarkan Theme & Custom Utility di Tailwind CSS v4 */
+@theme {
+  /* Color Palette */
+  --color-ink-900: #12213b;
+  --color-ink-600: #44506b;
+  --color-ink-300: #9aa3b8;
+
+  --color-paper-50: #f7f8fa;
+  --color-paper-0: #ffffff;
+
+  --color-line-200: #e4e7ed;
+
+  --color-income-600: #0e9f6e;
+  --color-income-100: #ddf3e9;
+
+  --color-expense-600: #d6483f;
+  --color-expense-100: #fbe2e0;
+
+  --color-amber-600: #c9861a;
+  --color-amber-100: #f7e9d2;
+
+  --color-indigo-600: #3457d5;
+  --color-indigo-100: #e1e7fb;
+
+  /* Typography */
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono-money: "IBM Plex Mono", monospace;
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Box Shadows */
+  --shadow-card:
+    0 1px 2px rgba(18, 33, 59, 0.04), 0 1px 0 rgba(18, 33, 59, 0.03);
+  --shadow-float: 0 8px 24px rgba(18, 33, 59, 0.12);
+}
+
+/* 2. Global CSS Variables & Dark Mode Strategy */
+:root {
+  --ink-900: var(--color-ink-900);
+  --ink-600: var(--color-ink-600);
+  --ink-300: var(--color-ink-300);
+  --paper-50: var(--color-paper-50);
+  --paper-0: var(--color-paper-0);
+  --line-200: var(--color-line-200);
+  --income-600: var(--color-income-600);
+  --expense-600: var(--color-expense-600);
+  --amber-600: var(--color-amber-600);
+  --indigo-600: var(--color-indigo-600);
+
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark,
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink-900: #edeff5;
+    --paper-50: #0f1420;
+    --paper-0: #171d2c;
+    --line-200: #2a3145;
+    --income-600: #34d399;
+    --expense-600: #f3746b;
+    --amber-600: #e3a94a;
+    --indigo-600: #6b85f5;
+  }
+}
+
+/* 3. Base Styles */
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink-900);
+  background-color: var(--paper-50);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--ink-900);
+}
+
+/* Tabular Numerals untuk seluruh elemen angka finansial */
+.font-money {
+  font-family: var(--font-mono-money);
+  font-feature-settings: "tnum" 1;
+}
+
+/* Focus Ring Standard (Aksesibilitas) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--indigo-600);
+  outline-offset: 2px;
+}
+
+/* 4. Custom Signature Component: Ledger Row */
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-200);
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ledger-row:hover {
+  background-color: var(--paper-50);
+}
+
+/* 5. Transitions & Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
