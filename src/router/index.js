@@ -6,6 +6,15 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import Login from "@/views/Login.vue";
 import Register from "@/views/Register.vue";
 import Dashboard from "@/views/Dashboard.vue"; // Import langsung Dashboard
+import TransactionCreate from "@/views/TransactionCreate.vue";
+import AccountCreate from "../views/AccountCreate.vue";
+import Account from "../views/Account.vue";
+import Category from "../views/Category.vue";
+import TransactionHistory from "../views/TransactionHistory.vue";
+import Budget from "../views/Budget.vue";
+import Goal from "../views/Goal.vue";
+import Report from "../views/Report.vue";
+import Settings from "../views/Settings.vue";
 
 const Placeholder = (title) => ({
   template: `<div class="p-6 bg-paper-0 border border-line-200 rounded-md">
@@ -42,9 +51,16 @@ const routes = [
         component: Dashboard, // Gunakan komponen yang diimpor langsung
       },
       {
-        path: "accounts",
+        path: "/accounts",
         name: "accounts",
-        component: Placeholder("Akun & Dompet"),
+        component: Account,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/history",
+        name: "history",
+        component: TransactionHistory,
+        meta: { requiresAuth: true },
       },
       {
         path: "transactions",
@@ -60,6 +76,43 @@ const routes = [
         path: "reports",
         name: "reports",
         component: Placeholder("Laporan Finansial"),
+      },
+
+      {
+        path: "/transactions/create",
+        name: "transactions.create",
+        component: TransactionCreate,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/catagory",
+        name: "catagory.index",
+        component: Category,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/budget",
+        name: "budget.index",
+        component: Budget,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/goals",
+        name: "goals.index",
+        component: Goal,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/report",
+        name: "report.index",
+        component: Report,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: "/settings",
+        name: "settings.index",
+        component: Settings,
+        meta: { requiresAuth: true },
       },
     ],
   },

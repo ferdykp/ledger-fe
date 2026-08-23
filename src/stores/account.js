@@ -42,6 +42,32 @@ export const useAccountStore = defineStore("account", () => {
     accounts.value.unshift(newAccount);
     return newAccount;
   }
+  // ledger-web/src/stores/account.js
+  async function updateAccount(id, payload) {
+    const response = await api.put(`/api/accounts/${id}`, payload);
+    const updated = response.data.data || response.data;
 
-  return { accounts, totalBalance, isLoading, fetchAccounts, addAccount };
+    const index = accounts.value.findIndex((a) => a.id === id);
+    if (index !== -1) {
+      accounts.value[index] = updated;
+    }
+    return updated;
+  }
+
+  async function deleteAccount(id) {
+    await api.delete(`/api/accounts/${id}`);
+    accounts.value = accounts.value.filter((a) => a.id !== id);
+  }
+
+  // Jangan lupa return updateAccount & deleteAccount di store
+
+  return {
+    accounts,
+    totalBalance,
+    isLoading,
+    fetchAccounts,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+  };
 });

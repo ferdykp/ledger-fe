@@ -90,6 +90,28 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = null;
     isAuthenticated.value = false;
   }
+  // ledger-web/src/stores/auth.js
 
-  return { user, token, isAuthenticated, fetchUser, login, register, logout };
+  async function updateProfile(formData) {
+    const response = await api.post("/api/user/profile", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    user.value = response.data.data || response.data;
+    return user.value;
+  }
+
+  // Jangan lupa return updateProfile di bagian bawah store:
+  return {
+    user,
+    token,
+    isAuthenticated,
+    fetchUser,
+    login,
+    register,
+    updateProfile,
+    logout,
+  };
 });
