@@ -1,21 +1,21 @@
-<!-- <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
-<template>
-  <HelloWorld />
-</template> -->
-
 <script setup>
-import { ref, onMounted } from "vue";
-import api from "./lib/axios";
+import { onMounted } from "vue";
+import { useAuthStore } from "./stores/auth";
+import ToastContainer from "./components/ToastContainer.vue";
 
-const message = ref("");
-onMounted(async () => {
-  const res = await api.get("/api/ping");
-  message.value = res.data.message;
+const authStore = useAuthStore();
+
+onMounted(() => {
+  authStore.fetchUser();
 });
 </script>
+
 <template>
-  <div>{{ message }}</div>
+  <div
+    class="min-h-screen bg-paper-50 text-ink-900 font-body antialiased relative"
+  >
+    <router-view />
+    <!-- Floating Toast Notifikasi -->
+    <ToastContainer />
+  </div>
 </template>
