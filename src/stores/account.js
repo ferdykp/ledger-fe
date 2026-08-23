@@ -7,12 +7,12 @@ export const useAccountStore = defineStore("account", () => {
   const accounts = ref([]);
   const isLoading = ref(false);
 
-  // Menghitung total saldo dari seluruh akun
+  // Menghitung total saldo (dipastikan konversi ke Number/parseFloat)
   const totalBalance = computed(() => {
-    return accounts.value.reduce(
-      (total, acc) => total + Number(acc.balance || 0),
-      0,
-    );
+    return accounts.value.reduce((total, acc) => {
+      const val = parseFloat(acc.balance);
+      return total + (isNaN(val) ? 0 : val);
+    }, 0);
   });
 
   // Ambil daftar akun dari backend Laravel
@@ -20,20 +20,27 @@ export const useAccountStore = defineStore("account", () => {
     isLoading.value = true;
     try {
       const response = await api.get("/api/accounts");
-      accounts.value = response.data.data || response.data;
+      // PERBAIKAN: Tangkap response.data.data dari AccountResource
+      if (Array.isArray(response.data.data)) {
+        accounts.value = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        accounts.value = response.data;
+      } else {
+        accounts.value = [];
+      }
     } catch (error) {
-      console.warn("API Accounts belum siap atau 404:", error.message);
-      accounts.value = []; // Set default array kosong
+      console.warn("Gagal memuat akun:", error.message);
+      accounts.value = [];
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Tambah akun/dompet baru
   async function addAccount(payload) {
     const response = await api.post("/api/accounts", payload);
-    accounts.value.push(response.data);
-    return response.data;
+    const newAccount = response.data.data || response.data;
+    accounts.value.unshift(newAccount);
+    return newAccount;
   }
 
   return { accounts, totalBalance, isLoading, fetchAccounts, addAccount };

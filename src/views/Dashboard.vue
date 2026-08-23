@@ -2,6 +2,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useAccountStore } from "@/stores/account";
+import { useAuthStore } from "../stores/auth";
 import { formatRupiah } from "@/utils/formatters";
 import {
   ArrowDownLeft,
@@ -16,6 +17,7 @@ import api from "@/lib/axios";
 const accountStore = useAccountStore();
 const recentTransactions = ref([]);
 const isLoadingTransactions = ref(false);
+const authStore = useAuthStore();
 
 onMounted(async () => {
   accountStore.fetchAccounts();
@@ -49,7 +51,9 @@ async function fetchRecentTransactions() {
     >
       <div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Gimana kabar dompetmu bulan ini? 👋
+          Gimana kabar dompetmu bulan ini ,
+          {{ authStore.user?.name || "User" }}
+          👋
         </h1>
         <p class="text-ink-600 text-sm mt-1">
           Uangmu jelas, terpantau rapi, dan siap dikontrol.
@@ -66,7 +70,7 @@ async function fetchRecentTransactions() {
     </div>
 
     <!-- HERO CARD (Lavender Section v2.0) -->
-    <section
+    <!-- <section
       class="bg-lavender-50 border border-violet-100 rounded-lg p-6 md:p-8 shadow-soft flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden"
     >
       <div class="space-y-2 relative z-10">
@@ -91,8 +95,105 @@ async function fetchRecentTransactions() {
           Kelola Dompet
         </router-link>
       </div>
-    </section>
+    </section> -->
 
+    <!-- Section Hero Balance & Budget -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Kartu Total Saldo & Ringkasan Pemasukan/Pengeluaran -->
+      <div
+        class="lg:col-span-2 bg-lavender-50 border border-violet-100 rounded-lg p-6 md:p-8 shadow-soft flex flex-col justify-between space-y-6"
+      >
+        <div class="space-y-2">
+          <div
+            class="flex items-center gap-2 text-violet-600 text-xs font-bold uppercase tracking-wider"
+          >
+            <Sparkles class="w-4 h-4" />
+            <span>Total Saldo (Semua Akun)</span>
+          </div>
+
+          <!-- Angka Saldo Reaktif dari Store -->
+          <div
+            class="font-mono-money font-bold text-3xl md:text-4xl text-ink-900 tracking-tight"
+          >
+            {{ formatRupiah(accountStore.totalBalance) }}
+          </div>
+        </div>
+
+        <!-- Ringkasan Pemasukan & Pengeluaran -->
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-violet-100"
+        >
+          <div
+            class="bg-paper-0 p-3.5 rounded-md border border-line-200 shadow-soft flex items-center justify-between"
+          >
+            <div>
+              <p class="text-xs text-ink-600 font-medium">
+                Pemasukan Bulan Ini
+              </p>
+              <p
+                class="font-mono-money font-bold text-income-600 text-base mt-0.5"
+              >
+                Rp 15.000.000
+              </p>
+            </div>
+            <div
+              class="w-8 h-8 rounded-full bg-income-100 text-income-600 flex items-center justify-center"
+            >
+              <ArrowDownLeft class="w-4 h-4" />
+            </div>
+          </div>
+
+          <div
+            class="bg-paper-0 p-3.5 rounded-md border border-line-200 shadow-soft flex items-center justify-between"
+          >
+            <div>
+              <p class="text-xs text-ink-600 font-medium">
+                Pengeluaran Bulan Ini
+              </p>
+              <p
+                class="font-mono-money font-bold text-expense-600 text-base mt-0.5"
+              >
+                Rp 11.500.000
+              </p>
+            </div>
+            <div
+              class="w-8 h-8 rounded-full bg-expense-100 text-expense-600 flex items-center justify-center"
+            >
+              <ArrowUpRight class="w-4 h-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu Sisa Budget Bulanan -->
+      <div
+        class="bg-paper-0 border border-line-200 rounded-lg p-6 shadow-soft flex flex-col justify-between space-y-4"
+      >
+        <div class="space-y-2">
+          <h3 class="font-display font-bold text-lg text-ink-900">
+            Sisa Budget Bulanan
+          </h3>
+          <div class="font-mono-money font-bold text-2xl text-violet-600">
+            Rp 3.500.000
+          </div>
+          <p class="text-xs text-ink-600 font-medium">
+            Terpakai 55% dari total budget Rp 8.000.000
+          </p>
+        </div>
+
+        <!-- Progress Bar Budget -->
+        <div class="space-y-1.5">
+          <div
+            class="w-full bg-base-50 rounded-full h-3 border border-line-200 overflow-hidden p-0.5"
+          >
+            <div
+              class="bg-violet-600 h-full rounded-full transition-all duration-500 shadow-violet"
+              style="width: 55%"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </section>
     <!-- MAIN GRID -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- DAFTAR AKUN -->
