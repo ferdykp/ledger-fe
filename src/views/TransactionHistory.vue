@@ -388,7 +388,7 @@ async function handleDelete() {
                 <!-- Delete Button -->
                 <button
                   @click.stop="confirmDelete(tx)"
-                  class="p-1.5 text-ink-300 hover:text-expense-600 rounded-lg hover:bg-expense-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                  class="p-1.5 text-gray-500 hover:text-expense-600 rounded-lg hover:bg-expense-50 group-hover:transition-all cursor-pointer"
                   title="Hapus Transaksi"
                 >
                   <Trash2 class="w-4 h-4" />
