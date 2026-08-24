@@ -83,24 +83,20 @@ async function fetchTransactions() {
 // Filtering Logic
 const filteredTransactions = computed(() => {
   return transactions.value.filter((tx) => {
-    // Search Filter
     const query = searchQuery.value.toLowerCase();
     const noteMatch = tx.note?.toLowerCase().includes(query);
     const categoryMatch = tx.category?.name?.toLowerCase().includes(query);
     const accountMatch = tx.account?.name?.toLowerCase().includes(query);
     const matchesSearch = !query || noteMatch || categoryMatch || accountMatch;
 
-    // Category Filter
     const matchesCategory =
       selectedCategory.value === "all" ||
       String(tx.category_id) === String(selectedCategory.value);
 
-    // Account Filter
     const matchesAccount =
       selectedAccount.value === "all" ||
       String(tx.account_id) === String(selectedAccount.value);
 
-    // Type Filter
     const matchesType =
       selectedType.value === "all" || tx.type === selectedType.value;
 
@@ -154,9 +150,15 @@ function formatDateLabel(dateStr) {
   return formattedDate;
 }
 
-function confirmDelete(tx) {
+function openDeleteModal(tx) {
   transactionToDelete.value = tx;
   isDeleteModalOpen.value = true;
+}
+
+function closeDeleteModal() {
+  if (isDeleting.value) return;
+  isDeleteModalOpen.value = false;
+  transactionToDelete.value = null;
 }
 
 async function handleDelete() {
@@ -164,16 +166,22 @@ async function handleDelete() {
   isDeleting.value = true;
   try {
     await api.delete(`/api/transactions/${transactionToDelete.value.id}`);
+
+    // Hapus dari state lokal
     transactions.value = transactions.value.filter(
       (t) => t.id !== transactionToDelete.value.id,
     );
+
+    // Update saldo dompet di store
     await accountStore.fetchAccounts();
+
+    // Tutup modal
     isDeleteModalOpen.value = false;
+    transactionToDelete.value = null;
   } catch (err) {
     console.error("Gagal menghapus transaksi:", err.message);
   } finally {
     isDeleting.value = false;
-    transactionToDelete.value = null;
   }
 }
 </script>
@@ -206,7 +214,6 @@ async function handleDelete() {
     <div
       class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3"
     >
-      <!-- Pill Selectors Group -->
       <div
         class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar"
       >
@@ -344,7 +351,7 @@ async function handleDelete() {
             <div
               v-for="tx in group.transactions"
               :key="tx.id"
-              class="bg-paper-0 border border-line-200/80 rounded-2xl p-4 shadow-soft hover:shadow-card transition-all flex items-center justify-between group cursor-pointer"
+              class="bg-paper-0 border border-line-200/80 rounded-2xl p-4 shadow-soft hover:shadow-card transition-all flex items-center justify-between group"
             >
               <div class="flex items-center gap-3.5">
                 <div
@@ -385,10 +392,11 @@ async function handleDelete() {
                   {{ formatRupiah(tx.amount) }}
                 </div>
 
-                <!-- Delete Button -->
+                <!-- Tombol Hapus (Pakai @click.stop untuk mencegah bubbling ke induk) -->
                 <button
-                  @click.stop="confirmDelete(tx)"
-                  class="p-1.5 text-gray-500 hover:text-expense-600 rounded-lg hover:bg-expense-50 group-hover:transition-all cursor-pointer"
+                  type="button"
+                  @click.stop="openDeleteModal(tx)"
+                  class="p-1.5 text-gray-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
                   title="Hapus Transaksi"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -400,7 +408,7 @@ async function handleDelete() {
       </template>
     </div>
 
-    <!-- Modal Konfirmasi Hapus Transaksi -->
+    <!-- MODAL KONFIRMASI HAPUS TRANSAKSI (Bersih dari modifier @click.stop.prevent) -->
     <div
       v-if="isDeleteModalOpen"
       class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
@@ -409,10 +417,11 @@ async function handleDelete() {
         class="w-full max-w-sm bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center animate-in fade-in zoom-in-95 duration-150"
       >
         <div
-          class="w-12 h-12 rounded-full bg-expense-100 text-expense-600 flex items-center justify-center mx-auto"
+          class="w-12 h-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mx-auto"
         >
           <AlertTriangle class="w-6 h-6" />
         </div>
+
         <div>
           <h3 class="font-display font-bold text-base text-ink-900">
             Hapus Transaksi?
@@ -420,22 +429,28 @@ async function handleDelete() {
           <p class="text-xs text-ink-600 mt-1">
             Transaksi
             <span class="font-bold text-ink-900">{{
-              transactionToDelete?.note || "ini"
+              transactionToDelete?.note ||
+              transactionToDelete?.category?.name ||
+              "ini"
             }}</span>
             akan dihapus dan saldo dompet akan dikembalikan.
           </p>
         </div>
+
         <div class="grid grid-cols-2 gap-2 pt-2">
           <button
-            @click="isDeleteModalOpen = false"
+            type="button"
+            @click="closeDeleteModal"
             class="py-2.5 bg-base-50 text-ink-600 font-semibold text-xs rounded-xl hover:bg-base-100 transition-colors cursor-pointer"
           >
             Batal
           </button>
+
           <button
+            type="button"
             @click="handleDelete"
             :disabled="isDeleting"
-            class="py-2.5 bg-expense-600 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-rose-500 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-rose-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ isDeleting ? "Menghapus..." : "Ya, Hapus" }}</span>
