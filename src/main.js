@@ -7,7 +7,7 @@ import router from "./router";
 import { registerSW } from "virtual:pwa-register";
 
 // Registrasi Service Worker PWA secara otomatis
-registerSW({ immediate: true });
+registerSW({ immediate: true, updateViaCache: "none" });
 
 const app = createApp(App);
 

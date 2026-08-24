@@ -48,6 +48,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         skipWaiting: true, // <--- Paksa Service Worker baru langsung aktif
         clientsClaim: true,
+        cacheId: "ledger-pwa-v2",
       },
     }),
   ],
