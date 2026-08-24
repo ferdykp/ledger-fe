@@ -26,7 +26,6 @@ import {
   Home,
   Plane,
   Receipt,
-  Trash2,
   AlertTriangle,
 } from "lucide-vue-next";
 import api from "@/lib/axios";
@@ -37,8 +36,11 @@ const categoryStore = useCategoryStore();
 const notifyStore = useNotificationStore();
 
 const { categories } = storeToRefs(categoryStore);
+const { accounts } = storeToRefs(accountStore);
 
 const isLoading = ref(false);
+
+// State Modal Quick Add Category
 const isAddCategoryModalOpen = ref(false);
 const isCreatingCategory = ref(false);
 
@@ -46,6 +48,10 @@ const isCreatingCategory = ref(false);
 const isDeleteCategoryModalOpen = ref(false);
 const categoryToDelete = ref(null);
 const isDeletingCategory = ref(false);
+
+// State Modal Quick Add Account (Sumber Dana)
+const isAddAccountModalOpen = ref(false);
+const isCreatingAccount = ref(false);
 
 // Form State Transaksi
 const form = ref({
@@ -65,6 +71,24 @@ const newCategoryForm = ref({
   color: "#6C4CF1",
   icon: "utensils",
 });
+
+// Form State Quick Add Account
+const newAccountForm = ref({
+  name: "",
+  type: "cash",
+  balance: 0,
+});
+
+// Otomatis pilih akun pertama jika account_id masih kosong
+watch(
+  accounts,
+  (newAccounts) => {
+    if (newAccounts.length > 0 && !form.value.account_id) {
+      form.value.account_id = newAccounts[0].id;
+    }
+  },
+  { immediate: true, deep: true },
+);
 
 const colorSwatches = [
   "#6C4CF1",
@@ -160,7 +184,7 @@ onMounted(async () => {
   if (accountStore.accounts.length === 0) {
     await accountStore.fetchAccounts();
   }
-  if (accountStore.accounts.length > 0) {
+  if (accountStore.accounts.length > 0 && !form.value.account_id) {
     form.value.account_id = accountStore.accounts[0].id;
   }
   if (categoryStore.categories.length === 0) {
@@ -179,6 +203,17 @@ const formattedAmount = computed({
   },
 });
 
+const formattedNewBalance = computed({
+  get() {
+    if (!newAccountForm.value.balance) return "";
+    return Number(newAccountForm.value.balance).toLocaleString("id-ID");
+  },
+  set(newValue) {
+    const rawValue = newValue.replace(/\D/g, "");
+    newAccountForm.value.balance = rawValue ? Number(rawValue) : 0;
+  },
+});
+
 function getAccountIcon(type) {
   if (type === "bank") return Building2;
   if (type === "credit_card") return CreditCard;
@@ -192,8 +227,13 @@ function openAddCategoryModal() {
   isAddCategoryModalOpen.value = true;
 }
 
+function openAddAccountModal() {
+  newAccountForm.value = { name: "", type: "cash", balance: 0 };
+  isAddAccountModalOpen.value = true;
+}
+
 function confirmDeleteCategory(cat, event) {
-  event.stopPropagation(); // Cegah kategori ikut terpilih saat tombol delete diklik
+  event.stopPropagation();
   categoryToDelete.value = cat;
   isDeleteCategoryModalOpen.value = true;
 }
@@ -243,10 +283,47 @@ async function handleCreateCategory() {
   }
 }
 
-async function handleSubmit() {
-  if (!form.value.amount || !form.value.account_id) {
+async function handleCreateAccount() {
+  if (!newAccountForm.value.name.trim()) return;
+  isCreatingAccount.value = true;
+  try {
+    const createdAcc = await accountStore.addAccount(newAccountForm.value);
     notifyStore.notify({
-      message: "Nominal dan Sumber Dana wajib diisi.",
+      message: "Sumber dana baru berhasil ditambahkan!",
+      type: "success",
+    });
+    form.value.account_id = createdAcc.id;
+    isAddAccountModalOpen.value = false;
+  } catch (err) {
+    notifyStore.notify({
+      message: err.response?.data?.message || "Gagal menambah sumber dana.",
+      type: "error",
+    });
+  } finally {
+    isCreatingAccount.value = false;
+  }
+}
+
+async function handleSubmit() {
+  if (!form.value.amount || Number(form.value.amount) <= 0) {
+    notifyStore.notify({
+      message: "Nominal transaksi wajib diisi.",
+      type: "error",
+    });
+    return;
+  }
+
+  if (!form.value.account_id) {
+    notifyStore.notify({
+      message: "Silakan pilih Sumber Dana / Akun terlebih dahulu.",
+      type: "error",
+    });
+    return;
+  }
+
+  if (form.value.type === "transfer" && !form.value.to_account_id) {
+    notifyStore.notify({
+      message: "Silakan pilih Akun Tujuan Transfer.",
       type: "error",
     });
     return;
@@ -370,8 +447,9 @@ async function handleSubmit() {
           <div class="flex items-center justify-between">
             <label
               class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-              >KATEGORI</label
             >
+              KATEGORI
+            </label>
             <button
               type="button"
               @click="openAddCategoryModal"
@@ -439,22 +517,35 @@ async function handleSubmit() {
               </div>
               <span
                 class="text-[11px] font-semibold text-ink-400 group-hover:text-violet-600"
-                >Tambah</span
               >
+                Tambah
+              </span>
             </button>
           </div>
         </div>
 
         <!-- Sumber Dana -->
         <div class="space-y-3">
-          <label
-            class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-          >
-            {{ form.type === "transfer" ? "DARI DOMPET" : "SUMBER DANA" }}
-          </label>
+          <div class="flex items-center justify-between">
+            <label
+              class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+            >
+              {{ form.type === "transfer" ? "DARI DOMPET" : "SUMBER DANA" }}
+            </label>
+            <button
+              type="button"
+              @click="openAddAccountModal"
+              class="text-xs font-bold text-violet-600 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span>Sumber Dana</span>
+            </button>
+          </div>
+
           <div
             class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
           >
+            <!-- Chip Daftar Akun/Sumber Dana -->
             <button
               v-for="acc in accountStore.accounts"
               :key="acc.id"
@@ -463,13 +554,61 @@ async function handleSubmit() {
               class="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-semibold shrink-0 transition-all cursor-pointer btn-bounce"
               :class="
                 form.account_id === acc.id
-                  ? 'border-violet-600 bg-paper-0 text-violet-600 ring-2 ring-violet-600/20'
+                  ? 'border-violet-600 bg-violet-50 text-violet-700 ring-2 ring-violet-600/30 font-bold'
                   : 'border-line-200 bg-paper-0 text-ink-600 hover:border-line-300'
               "
             >
               <component
                 :is="getAccountIcon(acc.type)"
                 class="w-4 h-4 text-violet-600"
+              />
+              <span>{{ acc.name }}</span>
+            </button>
+
+            <!-- Tombol Lingkaran Putus-Putus Tambah Sumber Dana -->
+            <button
+              type="button"
+              @click="openAddAccountModal"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-dashed border-line-300 hover:border-violet-600 text-ink-400 hover:text-violet-600 text-xs font-semibold shrink-0 transition-colors cursor-pointer group"
+              title="Tambah Sumber Dana"
+            >
+              <div
+                class="w-5 h-5 rounded-full border border-dashed border-ink-400 group-hover:border-violet-600 flex items-center justify-center"
+              >
+                <Plus class="w-3 h-3" />
+              </div>
+              <span>Tambah</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Akun Tujuan (Khusus Tipe Transfer) -->
+        <div v-if="form.type === 'transfer'" class="space-y-3">
+          <label
+            class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+          >
+            KE DOMPET TUJUAN
+          </label>
+          <div
+            class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+          >
+            <button
+              v-for="acc in accountStore.accounts.filter(
+                (a) => a.id !== form.account_id,
+              )"
+              :key="acc.id"
+              type="button"
+              @click="form.to_account_id = acc.id"
+              class="flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-semibold shrink-0 transition-all cursor-pointer btn-bounce"
+              :class="
+                form.to_account_id === acc.id
+                  ? 'border-emerald-600 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-600/30 font-bold'
+                  : 'border-line-200 bg-paper-0 text-ink-600 hover:border-line-300'
+              "
+            >
+              <component
+                :is="getAccountIcon(acc.type)"
+                class="w-4 h-4 text-emerald-600"
               />
               <span>{{ acc.name }}</span>
             </button>
@@ -480,8 +619,9 @@ async function handleSubmit() {
         <div class="space-y-2">
           <label
             class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-            >TANGGAL</label
           >
+            TANGGAL
+          </label>
           <input
             v-model="form.date"
             type="date"
@@ -494,8 +634,9 @@ async function handleSubmit() {
         <div class="space-y-2">
           <label
             class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-            >CATATAN (OPSIONAL)</label
           >
+            CATATAN (OPSIONAL)
+          </label>
           <textarea
             v-model="form.note"
             rows="2"
@@ -544,8 +685,9 @@ async function handleSubmit() {
           <div class="space-y-1.5">
             <label
               class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-              >Nama Kategori</label
             >
+              Nama Kategori
+            </label>
             <input
               v-model="newCategoryForm.name"
               type="text"
@@ -558,8 +700,9 @@ async function handleSubmit() {
           <div class="space-y-2">
             <label
               class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-              >Pilih Ikon</label
             >
+              Pilih Ikon
+            </label>
             <div
               class="grid grid-cols-6 gap-2 bg-base-50 p-2 rounded-2xl border border-line-200 max-h-36 overflow-y-auto no-scrollbar"
             >
@@ -584,8 +727,9 @@ async function handleSubmit() {
           <div class="space-y-2">
             <label
               class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
-              >Warna</label
             >
+              Warna
+            </label>
             <div class="flex items-center gap-2.5">
               <button
                 v-for="color in colorSwatches"
@@ -618,6 +762,101 @@ async function handleSubmit() {
             >
               <Loader2 v-if="isCreatingCategory" class="w-4 h-4 animate-spin" />
               <span>Simpan</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Quick Modal Tambah Sumber Dana (Akun / Dompet) -->
+    <div
+      v-if="isAddAccountModalOpen"
+      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
+        <div
+          class="px-6 py-4 border-b border-line-200 flex items-center justify-between"
+        >
+          <h3 class="font-display font-bold text-base text-ink-900">
+            Tambah Sumber Dana Baru
+          </h3>
+          <button
+            @click="isAddAccountModalOpen = false"
+            class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="handleCreateAccount" class="p-6 space-y-4">
+          <div class="space-y-1.5">
+            <label
+              class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+            >
+              Nama Dompet / Rekening
+            </label>
+            <input
+              v-model="newAccountForm.name"
+              type="text"
+              required
+              placeholder="Contoh: BCA Utama, Gopay, Dompet Tunai"
+              class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-medium text-ink-900"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label
+              class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+            >
+              Tipe Dompet
+            </label>
+            <select
+              v-model="newAccountForm.type"
+              class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900"
+            >
+              <option value="cash">Tunai (Cash)</option>
+              <option value="bank">Bank</option>
+              <option value="ewallet">E-Wallet</option>
+              <option value="credit_card">Kartu Kredit</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label
+              class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+            >
+              Saldo Awal
+            </label>
+            <div class="relative flex items-center">
+              <span class="absolute left-4 text-sm font-bold text-violet-600"
+                >Rp</span
+              >
+              <input
+                v-model="formattedNewBalance"
+                type="text"
+                placeholder="0"
+                class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
+              />
+            </div>
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button
+              type="button"
+              @click="isAddAccountModalOpen = false"
+              class="flex-1 h-11 bg-base-50 text-ink-600 font-bold text-xs rounded-xl cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              :disabled="isCreatingAccount"
+              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Loader2 v-if="isCreatingAccount" class="w-4 h-4 animate-spin" />
+              <span>Simpan Sumber Dana</span>
             </button>
           </div>
         </form>
