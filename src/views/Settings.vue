@@ -2,6 +2,7 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCategoryStore } from "@/stores/category";
 import { useNotificationStore } from "@/stores/notification";
@@ -21,8 +22,10 @@ import {
   Loader2,
   ChevronDown,
   User as UserIcon,
+  LogOut,
 } from "lucide-vue-next";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const categoryStore = useCategoryStore();
 const notifyStore = useNotificationStore();
@@ -61,9 +64,10 @@ const currency = ref(user.value?.currency || "IDR");
 const language = ref("id");
 const theme = ref(localStorage.getItem("theme") || "light");
 
-// State Keamanan
+// State Keamanan & Logout
 const isCloudBackup = ref(true);
 const isSavingProfile = ref(false);
+const isLoggingOut = ref(false);
 
 const iconMap = {
   makanan: Utensils,
@@ -82,8 +86,6 @@ function getCategoryIcon(name) {
   return Utensils;
 }
 
-// Di dalam script <script setup> Settings.vue
-
 function applyTheme(newTheme) {
   theme.value = newTheme;
   localStorage.setItem("theme", newTheme);
@@ -99,7 +101,6 @@ onMounted(() => {
   if (categories.value.length === 0) {
     categoryStore.fetchCategories();
   }
-  // Terapkan tema saat komponen dipasang
   applyTheme(theme.value);
 });
 
@@ -159,6 +160,26 @@ function handleExport(type) {
     message: `Mengeksport data transaksi ke format ${type.toUpperCase()}...`,
     type: "info",
   });
+}
+
+// Handler Logout
+async function handleLogout() {
+  isLoggingOut.value = true;
+  try {
+    await authStore.logout();
+    notifyStore.notify({
+      message: "Berhasil keluar dari akun.",
+      type: "success",
+    });
+    router.push("/login");
+  } catch (err) {
+    notifyStore.notify({
+      message: err.response?.data?.message || "Gagal melakukan logout.",
+      type: "error",
+    });
+  } finally {
+    isLoggingOut.value = false;
+  }
 }
 </script>
 
@@ -327,6 +348,19 @@ function handleExport(type) {
                 <span>PDF</span>
               </button>
             </div>
+          </div>
+
+          <div class="pt-4 border-t border-line-200">
+            <button
+              type="button"
+              @click="handleLogout"
+              :disabled="isLoggingOut"
+              class="w-full h-11 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 btn-bounce cursor-pointer flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Loader2 v-if="isLoggingOut" class="w-4 h-4 animate-spin" />
+              <LogOut v-else class="w-4 h-4" />
+              <span>Keluar dari Akun</span>
+            </button>
           </div>
         </div>
       </div>
