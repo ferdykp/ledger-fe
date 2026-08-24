@@ -1,6 +1,6 @@
 <!-- ledger-web/src/views/Settings.vue -->
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
 import { useCategoryStore } from "@/stores/category";
@@ -8,6 +8,7 @@ import { useNotificationStore } from "@/stores/notification";
 import {
   Pencil,
   Moon,
+  Sun,
   ShieldCheck,
   FileSpreadsheet,
   FileText,
@@ -19,6 +20,7 @@ import {
   Home,
   Loader2,
   ChevronDown,
+  User as UserIcon,
 } from "lucide-vue-next";
 
 const authStore = useAuthStore();
@@ -28,16 +30,36 @@ const notifyStore = useNotificationStore();
 const { user } = storeToRefs(authStore);
 const { categories } = storeToRefs(categoryStore);
 
+// Avatar Preview & Upload State
+const fileInput = ref(null);
+const avatarPreview = ref(null);
+const selectedAvatarFile = ref(null);
+
 // State Form Profil
 const profileForm = ref({
-  name: user.value?.name || "Andi Susanto",
-  email: user.value?.email || "andi@example.com",
+  name: user.value?.name || "",
+  email: user.value?.email || "",
 });
 
+// Watch sync data user jika direfresh
+watch(
+  user,
+  (newUser) => {
+    if (newUser) {
+      profileForm.value.name = newUser.name || "";
+      profileForm.value.email = newUser.email || "";
+      if (newUser.avatar_url) {
+        avatarPreview.value = newUser.avatar_url;
+      }
+    }
+  },
+  { immediate: true },
+);
+
 // State Preferensi
-const currency = ref("IDR");
+const currency = ref(user.value?.currency || "IDR");
 const language = ref("id");
-const theme = ref("light"); // 'light' | 'dark'
+const theme = ref(localStorage.getItem("theme") || "light");
 
 // State Keamanan
 const isCloudBackup = ref(true);
@@ -60,22 +82,73 @@ function getCategoryIcon(name) {
   return Utensils;
 }
 
+// Di dalam script <script setup> Settings.vue
+
+function applyTheme(newTheme) {
+  theme.value = newTheme;
+  localStorage.setItem("theme", newTheme);
+
+  if (newTheme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}
+
 onMounted(() => {
   if (categories.value.length === 0) {
     categoryStore.fetchCategories();
   }
+  // Terapkan tema saat komponen dipasang
+  applyTheme(theme.value);
 });
 
+// Trigger File Picker untuk Avatar
+function triggerAvatarSelect() {
+  fileInput.value?.click();
+}
+
+// Preview foto yang dipilih sebelum upload
+function handleAvatarChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 2 * 1024 * 1024) {
+    notifyStore.notify({
+      message: "Ukuran gambar maksimal 2MB.",
+      type: "error",
+    });
+    return;
+  }
+
+  selectedAvatarFile.value = file;
+  avatarPreview.value = URL.createObjectURL(file);
+}
+
+// Submit Update Profile & Upload Avatar ke API
 async function handleSaveProfile() {
   isSavingProfile.value = true;
   try {
-    // Panggil API update profile jika tersedia
+    const formData = new FormData();
+    formData.append("name", profileForm.value.name);
+    formData.append("email", profileForm.value.email);
+    formData.append("currency", currency.value);
+    formData.append("theme", theme.value);
+
+    if (selectedAvatarFile.value) {
+      formData.append("avatar", selectedAvatarFile.value);
+    }
+
+    await authStore.updateProfile(formData);
     notifyStore.notify({
-      message: "Profil berhasil diperbarui!",
+      message: "Profil dan avatar berhasil diperbarui!",
       type: "success",
     });
   } catch (err) {
-    notifyStore.notify({ message: "Gagal memperbarui profil.", type: "error" });
+    notifyStore.notify({
+      message: err.response?.data?.message || "Gagal memperbarui profil.",
+      type: "error",
+    });
   } finally {
     isSavingProfile.value = false;
   }
@@ -111,18 +184,40 @@ function handleExport(type) {
         >
           <h2 class="font-display font-bold text-base text-ink-900">Profil</h2>
 
-          <!-- Avatar & Upload Badge -->
+          <!-- Avatar Unisex / Netral Default & Trigger Upload -->
           <div class="flex justify-center">
-            <div class="relative">
+            <div class="relative group">
+              <!-- Render Foto Pengguna jika Ada Preview/Uploaded -->
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256"
+                v-if="avatarPreview || user?.avatar_url"
+                :src="avatarPreview || user?.avatar_url"
                 alt="Avatar"
                 class="w-24 h-24 rounded-full object-cover border-4 border-violet-100 shadow-soft"
               />
+
+              <!-- Render Avatar Unisex / Neutral Silhouette SVG jika Belum Upload -->
+              <div
+                v-else
+                class="w-24 h-24 rounded-full bg-violet-100 border-4 border-violet-50 flex items-center justify-center text-violet-500 shadow-soft"
+              >
+                <UserIcon class="w-12 h-12 stroke-[1.8]" />
+              </div>
+
+              <!-- Input Hidden File Picker -->
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="handleAvatarChange"
+              />
+
+              <!-- Tombol Ubah Foto -->
               <button
                 type="button"
+                @click="triggerAvatarSelect"
                 class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-violet-600 text-paper-0 flex items-center justify-center shadow-soft hover:bg-violet-700 transition-all cursor-pointer btn-bounce"
-                title="Ubah Foto"
+                title="Ubah Foto Avatar"
               >
                 <Pencil class="w-4 h-4" />
               </button>
@@ -141,6 +236,7 @@ function handleExport(type) {
                 v-model="profileForm.name"
                 type="text"
                 required
+                placeholder="Nama Anda"
                 class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900 transition-colors"
               />
             </div>
@@ -156,6 +252,7 @@ function handleExport(type) {
                 v-model="profileForm.email"
                 type="email"
                 required
+                placeholder="email@example.com"
                 class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900 transition-colors"
               />
             </div>
@@ -287,7 +384,7 @@ function handleExport(type) {
             </div>
           </div>
 
-          <!-- Tema Tampilan Switcher (Violet Pill) -->
+          <!-- Tema Tampilan Switcher Interaktif (Terang / Gelap) -->
           <div
             class="bg-violet-50/60 border border-violet-100 rounded-2xl p-4 flex items-center justify-between"
           >
@@ -295,7 +392,8 @@ function handleExport(type) {
               <div
                 class="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0"
               >
-                <Moon class="w-4 h-4" />
+                <Moon v-if="theme === 'dark'" class="w-4 h-4" />
+                <Sun v-else class="w-4 h-4" />
               </div>
               <div>
                 <h4 class="font-display font-bold text-xs text-ink-900">
@@ -312,11 +410,11 @@ function handleExport(type) {
             >
               <button
                 type="button"
-                @click="theme = 'light'"
-                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                @click="applyTheme('light')"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                 :class="
                   theme === 'light'
-                    ? 'bg-violet-100/80 text-violet-700'
+                    ? 'bg-violet-100/80 text-violet-700 shadow-soft'
                     : 'text-ink-400 hover:text-ink-900'
                 "
               >
@@ -324,11 +422,11 @@ function handleExport(type) {
               </button>
               <button
                 type="button"
-                @click="theme = 'dark'"
-                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                @click="applyTheme('dark')"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                 :class="
                   theme === 'dark'
-                    ? 'bg-violet-600 text-paper-0'
+                    ? 'bg-violet-600 text-paper-0 shadow-violet'
                     : 'text-ink-400 hover:text-ink-900'
                 "
               >
