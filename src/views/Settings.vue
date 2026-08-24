@@ -167,10 +167,10 @@ async function handleLogout() {
   isLoggingOut.value = true;
   try {
     await authStore.logout();
-    notifyStore.notify({
-      message: "Berhasil keluar dari akun.",
-      type: "success",
-    });
+    // notifyStore.notify({
+    //   message: "Berhasil keluar dari akun.",
+    //   type: "success",
+    // });
     router.push("/login");
   } catch (err) {
     notifyStore.notify({
