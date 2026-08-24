@@ -11,10 +11,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+
       devOptions: {
-        enabled: true, // <--- TAMBAHKAN INI agar PWA aktif di mode dev
+        enabled: false,
       },
+
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
+
       manifest: {
         name: "Ledger — Personal Finance",
         short_name: "Ledger",
@@ -44,11 +47,14 @@ export default defineConfig({
           },
         ],
       },
+
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        skipWaiting: true, // <--- Paksa Service Worker baru langsung aktif
+
+        skipWaiting: true,
         clientsClaim: true,
-        cacheId: "ledger-pwa-v2",
+
+        cleanupOutdatedCaches: true,
       },
     }),
   ],
