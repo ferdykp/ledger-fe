@@ -8,14 +8,29 @@ import {
   ArrowUpRight,
   Wallet,
   Sparkles,
+  AlertTriangle,
+  TrendingUp,
   ChevronDown,
   ArrowRight,
 } from "lucide-vue-next";
 import api from "@/lib/axios";
 
-const selectedMonth = ref("2026-08");
+function getCurrentMonthStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getPrevMonthStr(monthStr) {
+  const [year, month] = monthStr.split("-").map(Number); // month: 1-12
+  const date = new Date(year, month - 1, 1);
+  date.setMonth(date.getMonth() - 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const selectedMonth = ref(getCurrentMonthStr());
 const isLoading = ref(false);
 const transactions = ref([]);
+const prevTransactions = ref([]);
 
 onMounted(() => {
   fetchReportData();
@@ -24,36 +39,73 @@ onMounted(() => {
 async function fetchReportData() {
   isLoading.value = true;
   try {
-    const res = await api.get(`/api/transactions?month=${selectedMonth.value}`);
-    transactions.value = res.data.data || res.data || [];
+    const prevMonth = getPrevMonthStr(selectedMonth.value);
+    const [curRes, prevRes] = await Promise.all([
+      api.get(`/api/transactions?month=${selectedMonth.value}`),
+      api.get(`/api/transactions?month=${prevMonth}`),
+    ]);
+    transactions.value = curRes.data.data || curRes.data || [];
+    prevTransactions.value = prevRes.data.data || prevRes.data || [];
   } catch (err) {
     console.warn("Gagal memuat data laporan:", err.message);
     transactions.value = [];
+    prevTransactions.value = [];
   } finally {
     isLoading.value = false;
   }
 }
 
-// Total Pemasukan
-const totalIncome = computed(() => {
-  return transactions.value
-    .filter((t) => t.type === "income")
+function sumByType(list, type) {
+  return list
+    .filter((t) => t.type === type)
     .reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
-});
+}
 
-// Total Pengeluaran
-const totalExpense = computed(() => {
-  return transactions.value
-    .filter((t) => t.type === "expense")
-    .reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
-});
+// Total bulan ini
+const totalIncome = computed(() => sumByType(transactions.value, "income"));
+const totalExpense = computed(() => sumByType(transactions.value, "expense"));
+const netSavings = computed(() => totalIncome.value - totalExpense.value);
 
-// Tabungan Bersih (Net Savings)
-const netSavings = computed(() => {
-  return totalIncome.value - totalExpense.value;
-});
+// Total bulan lalu (untuk perbandingan)
+const prevIncome = computed(() => sumByType(prevTransactions.value, "income"));
+const prevExpense = computed(() =>
+  sumByType(prevTransactions.value, "expense"),
+);
+const prevNetSavings = computed(() => prevIncome.value - prevExpense.value);
 
-// Breakdown Pengeluaran per Kategori
+// null artinya "tidak ada data bulan lalu untuk dibandingkan"
+function pctChange(current, previous) {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function changeLabel(current, previous) {
+  const pct = pctChange(current, previous);
+  if (pct === null) return "Baru bulan ini";
+  if (previous === 0 && current === 0) return "Belum ada data";
+  const rounded = Math.round(pct);
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded}% vs bulan lalu`;
+}
+
+const incomeChangePct = computed(
+  () => pctChange(totalIncome.value, prevIncome.value) ?? 0,
+);
+const expenseChangePct = computed(
+  () => pctChange(totalExpense.value, prevExpense.value) ?? 0,
+);
+
+const incomeChangeLabel = computed(() =>
+  changeLabel(totalIncome.value, prevIncome.value),
+);
+const expenseChangeLabel = computed(() =>
+  changeLabel(totalExpense.value, prevExpense.value),
+);
+const savingsChangeLabel = computed(() =>
+  changeLabel(netSavings.value, prevNetSavings.value),
+);
+
+// Breakdown Pengeluaran per Kategori (diurutkan dari terbesar)
 const categoryBreakdown = computed(() => {
   const map = {};
   transactions.value
@@ -64,11 +116,76 @@ const categoryBreakdown = computed(() => {
     });
 
   const colors = ["#F0473E", "#6C4CF1", "#FFB020", "#94A3B8"];
-  return Object.keys(map).map((name, idx) => ({
-    name,
-    amount: map[name],
-    color: colors[idx % colors.length],
-  }));
+  return Object.entries(map)
+    .map(([name, amount], idx) => ({
+      name,
+      amount,
+      color: colors[idx % colors.length],
+    }))
+    .sort((a, b) => b.amount - a.amount);
+});
+
+const topCategory = computed(() => categoryBreakdown.value[0] || null);
+
+// Insight riil, dihitung dari data transaksi — bukan teks statis
+const insight = computed(() => {
+  if (transactions.value.length === 0) {
+    return {
+      type: "neutral",
+      text: "Belum ada transaksi bulan ini. Yuk mulai catat pemasukan dan pengeluaranmu.",
+    };
+  }
+
+  const savingsDiff = netSavings.value - prevNetSavings.value;
+
+  if (netSavings.value < 0) {
+    return {
+      type: "warning",
+      text: `Pengeluaranmu bulan ini ${formatRupiah(totalExpense.value)}, lebih besar dari pemasukan${
+        topCategory.value
+          ? `. Kategori terbesar: ${topCategory.value.name}`
+          : ""
+      }.`,
+    };
+  }
+
+  if (expenseChangePct.value > 15 && savingsDiff >= 0) {
+    return {
+      type: "info",
+      text: `Pengeluaran${topCategory.value ? ` di ${topCategory.value.name}` : ""} naik ${Math.round(
+        expenseChangePct.value,
+      )}% dibanding bulan lalu, tapi tabunganmu tetap naik ${formatRupiah(Math.abs(savingsDiff))} — dijaga terus.`,
+    };
+  }
+
+  if (expenseChangePct.value > 15 && savingsDiff < 0) {
+    return {
+      type: "warning",
+      text: `Pengeluaran${topCategory.value ? ` di ${topCategory.value.name}` : ""} naik ${Math.round(
+        expenseChangePct.value,
+      )}% dan tabunganmu turun ${formatRupiah(Math.abs(savingsDiff))} dibanding bulan lalu. Coba dipangkas bulan depan.`,
+    };
+  }
+
+  if (expenseChangePct.value < -5) {
+    return {
+      type: "positive",
+      text: `Mantap, pengeluaranmu turun ${Math.round(Math.abs(expenseChangePct.value))}% dari bulan lalu dan tabunganmu jadi ${formatRupiah(
+        netSavings.value,
+      )}.`,
+    };
+  }
+
+  return {
+    type: "neutral",
+    text: `Keuanganmu relatif stabil bulan ini dengan tabungan bersih ${formatRupiah(netSavings.value)}.`,
+  };
+});
+
+const insightIcon = computed(() => {
+  if (insight.value.type === "warning") return AlertTriangle;
+  if (insight.value.type === "info") return TrendingUp;
+  return Sparkles;
 });
 </script>
 
@@ -129,9 +246,14 @@ const categoryBreakdown = computed(() => {
             {{ formatRupiah(totalIncome) }}
           </div>
           <span
-            class="inline-block mt-2 px-2.5 py-0.5 bg-emerald-100/80 text-emerald-700 font-bold text-[10px] rounded-md"
+            class="inline-block mt-2 px-2.5 py-0.5 font-bold text-[10px] rounded-md"
+            :class="
+              incomeChangePct >= 0
+                ? 'bg-emerald-100/80 text-emerald-700'
+                : 'bg-rose-100/80 text-rose-600'
+            "
           >
-            +12% vs last month
+            {{ incomeChangeLabel }}
           </span>
         </div>
       </div>
@@ -159,9 +281,14 @@ const categoryBreakdown = computed(() => {
             {{ formatRupiah(totalExpense) }}
           </div>
           <span
-            class="inline-block mt-2 px-2.5 py-0.5 bg-rose-100/80 text-rose-600 font-bold text-[10px] rounded-md"
+            class="inline-block mt-2 px-2.5 py-0.5 font-bold text-[10px] rounded-md"
+            :class="
+              expenseChangePct > 0
+                ? 'bg-rose-100/80 text-rose-600'
+                : 'bg-emerald-100/80 text-emerald-700'
+            "
           >
-            +5% vs last month
+            {{ expenseChangeLabel }}
           </span>
         </div>
       </div>
@@ -191,7 +318,7 @@ const categoryBreakdown = computed(() => {
           <span
             class="inline-block mt-2 px-2.5 py-0.5 bg-violet-100/80 text-violet-700 font-bold text-[10px] rounded-md"
           >
-            On track for Goal A
+            {{ savingsChangeLabel }}
           </span>
         </div>
       </div>
@@ -217,7 +344,12 @@ const categoryBreakdown = computed(() => {
         </div>
       </div>
 
-      <!-- Curve Graphic Representation Placeholder -->
+      <!--
+        CATATAN: kurva SVG di bawah ini masih placeholder statis,
+        belum menggambar data mingguan asli. Kalau mau ini juga
+        dibuat real (per-minggu dari transaksi), beri tahu saya —
+        perlu logika agregasi mingguan terpisah.
+      -->
       <div
         class="h-64 relative flex flex-col justify-between pt-4 border-b border-line-200"
       >
@@ -226,7 +358,6 @@ const categoryBreakdown = computed(() => {
           viewBox="0 0 400 150"
           preserveAspectRatio="none"
         >
-          <!-- Area Gradient Green Pemasukan -->
           <defs>
             <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stop-color="#10B981" stop-opacity="0.2" />
@@ -243,8 +374,6 @@ const categoryBreakdown = computed(() => {
             stroke="#10B981"
             stroke-width="3"
           />
-
-          <!-- Red Line Pengeluaran -->
           <path
             d="M 0,130 Q 100,100 200,85 T 400,75"
             fill="none"
@@ -253,7 +382,6 @@ const categoryBreakdown = computed(() => {
           />
         </svg>
 
-        <!-- X-Axis Labels -->
         <div
           class="flex justify-between text-[11px] font-bold text-ink-400 pt-2"
         >
@@ -275,8 +403,13 @@ const categoryBreakdown = computed(() => {
           Breakdown Kategori
         </h2>
 
+        <!--
+          CATATAN: ring donut di bawah masih pakai persentase statis
+          (35/25/20/20). Kalau mau real, beri tahu saya — perlu
+          hitung persentase dari categoryBreakdown yang sudah dihitung
+          di atas dan generate stroke-dasharray secara dinamis.
+        -->
         <div class="flex items-center justify-center py-4">
-          <!-- Ring Donut Visual -->
           <div class="relative w-48 h-48 flex items-center justify-center">
             <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path
@@ -329,30 +462,28 @@ const categoryBreakdown = computed(() => {
           </div>
         </div>
 
-        <!-- Category Legends -->
+        <!-- Category Legends: sekarang dari data riil, urut terbesar -->
         <div
           class="flex items-center justify-center gap-4 flex-wrap text-xs font-semibold text-ink-600"
         >
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
-            <span>Food</span>
+          <div
+            v-for="cat in categoryBreakdown.slice(0, 4)"
+            :key="cat.name"
+            class="flex items-center gap-1.5"
+          >
+            <span
+              class="w-3 h-3 rounded-full"
+              :style="{ backgroundColor: cat.color }"
+            ></span>
+            <span>{{ cat.name }}</span>
           </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-violet-600"></span>
-            <span>Transport</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-amber-400"></span>
-            <span>Rent</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-slate-300"></span>
-            <span>Other</span>
-          </div>
+          <span v-if="categoryBreakdown.length === 0" class="text-ink-400">
+            Belum ada pengeluaran bulan ini
+          </span>
         </div>
       </div>
 
-      <!-- Insight Ledger (Card Kanan Gradient Purple) -->
+      <!-- Insight Ledger (Card Kanan Gradient Purple) — SEKARANG DINAMIS -->
       <div
         class="lg:col-span-5 bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-800 text-paper-0 rounded-3xl p-8 shadow-violet flex flex-col justify-between space-y-6 relative overflow-hidden"
       >
@@ -360,15 +491,14 @@ const categoryBreakdown = computed(() => {
           <div
             class="flex items-center gap-2 text-violet-200 text-xs font-bold uppercase tracking-wider"
           >
-            <Sparkles class="w-4 h-4 text-amber-300" />
+            <component :is="insightIcon" class="w-4 h-4 text-amber-300" />
             <span>Insight Ledger</span>
           </div>
 
           <p
             class="font-display font-medium text-lg leading-relaxed text-violet-100"
           >
-            "Bulan ini jajanmu agak naik nih, tapi kamu berhasil nabung lebih
-            banyak dari bulan lalu! 🚀"
+            {{ insight.text }}
           </p>
         </div>
 
