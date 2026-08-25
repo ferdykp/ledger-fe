@@ -1,5 +1,6 @@
 <!-- ledger-web/src/components/Sidebar.vue -->
 <script setup>
+import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
 import { useRoute } from "vue-router";
@@ -16,12 +17,17 @@ import {
   User as UserIcon,
   Bell,
   Plus,
+  Menu,
+  X,
 } from "lucide-vue-next";
 import logoImg from "../assets/ledger-icon.png";
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 const route = useRoute();
+
+// State Modal Action Sheet "Lainnya"
+const isMoreMenuOpen = ref(false);
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -33,17 +39,44 @@ const navItems = [
   { name: "Pengaturan", path: "/settings", icon: Settings },
 ];
 
-// Item khusus untuk bottom navigation mobile
+// Item khusus untuk bottom navigation mobile (4 Utama + Floating Plus)
 const mobileBottomNav = [
   { name: "Beranda", path: "/dashboard", icon: LayoutDashboard },
   { name: "Riwayat", path: "/history", icon: History },
   { name: "Dompet", path: "/accounts", icon: Wallet },
-  { name: "Laporan", path: "/report", icon: BarChart3 },
+];
+
+// Menu Tambahan di dalam Action Sheet "Lainnya"
+const mobileMoreItems = [
+  {
+    name: "Budget",
+    path: "/budget",
+    icon: PiggyBank,
+    desc: "Kelola batas pengeluaran bulanan",
+  },
+  {
+    name: "Goals",
+    path: "/goals",
+    icon: Target,
+    desc: "Target impian & tabungan",
+  },
+  {
+    name: "Laporan",
+    path: "/report",
+    icon: BarChart3,
+    desc: "Analisis & statistik keuangan",
+  },
+  {
+    name: "Pengaturan",
+    path: "/settings",
+    icon: Settings,
+    desc: "Profil, tema, & preferensi",
+  },
 ];
 </script>
 
 <template>
-  <!-- TOPBAR MOBILE PRESISI SESUAI GAMBAR (Avatar Kiri, Title Tengah, Lonceng Kanan) -->
+  <!-- TOPBAR MOBILE -->
   <header
     class="lg:hidden sticky top-0 z-30 bg-paper-0/95 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-line-200 shadow-soft"
   >
@@ -80,7 +113,7 @@ const mobileBottomNav = [
     </button>
   </header>
 
-  <!-- SIDEBAR DESKTOP (Tampil di Layar Desktop lg:) -->
+  <!-- SIDEBAR DESKTOP -->
   <aside
     class="hidden lg:flex flex-col w-64 border-r border-line-200 bg-paper-0 h-screen sticky top-0 p-5 shrink-0 justify-between font-body z-20"
   >
@@ -177,11 +210,11 @@ const mobileBottomNav = [
     </div>
   </aside>
 
-  <!-- BOTTOM NAVIGATION MOBILE (SESUAI GAMBAR DENGAN TOMBOL TAMBAH MENGAMBANG) -->
+  <!-- BOTTOM NAVIGATION MOBILE ERGONOMIS -->
   <nav
-    class="lg:hidden fixed bottom-0 left-0 right-0 bg-paper-0/95 backdrop-blur-md border-t border-line-200 flex items-center justify-around px-3 py-2 z-40 pb-safe shadow-card"
+    class="lg:hidden fixed bottom-0 left-0 right-0 bg-paper-0/95 backdrop-blur-md border-t border-line-200 flex items-center justify-around px-2 py-2 z-40 pb-safe shadow-card"
   >
-    <!-- Item Kiri 1 (Beranda) -->
+    <!-- Item 1: Beranda -->
     <router-link
       :to="mobileBottomNav[0].path"
       class="flex flex-col items-center gap-1 p-1 flex-1 text-center transition-colors"
@@ -197,7 +230,7 @@ const mobileBottomNav = [
       }}</span>
     </router-link>
 
-    <!-- Item Kiri 2 (Riwayat) -->
+    <!-- Item 2: Riwayat -->
     <router-link
       :to="mobileBottomNav[1].path"
       class="flex flex-col items-center gap-1 p-1 flex-1 text-center transition-colors"
@@ -213,7 +246,7 @@ const mobileBottomNav = [
       }}</span>
     </router-link>
 
-    <!-- TOMBOL TAMBAH FLOATING CORAL/RED CENTER (+) -->
+    <!-- TOMBOL MENGAMBANG TAMBAH TRANSAKSI (+) -->
     <div class="flex-1 flex justify-center -mt-6">
       <router-link
         to="/transactions/create"
@@ -223,7 +256,7 @@ const mobileBottomNav = [
       </router-link>
     </div>
 
-    <!-- Item Kanan 1 (Dompet) -->
+    <!-- Item 3: Dompet -->
     <router-link
       :to="mobileBottomNav[2].path"
       class="flex flex-col items-center gap-1 p-1 flex-1 text-center transition-colors"
@@ -239,22 +272,102 @@ const mobileBottomNav = [
       }}</span>
     </router-link>
 
-    <!-- Item Kanan 2 (Laporan) -->
-    <router-link
-      :to="mobileBottomNav[3].path"
-      class="flex flex-col items-center gap-1 p-1 flex-1 text-center transition-colors"
+    <!-- Item 4: Lainnya (Membuka Action Sheet Drawer) -->
+    <button
+      type="button"
+      @click="isMoreMenuOpen = true"
+      class="flex flex-col items-center gap-1 p-1 flex-1 text-center transition-colors cursor-pointer"
       :class="
-        route.path === mobileBottomNav[3].path
+        isMoreMenuOpen
           ? 'text-violet-600 font-extrabold'
           : 'text-ink-400 font-medium'
       "
     >
-      <component :is="mobileBottomNav[3].icon" class="w-5 h-5 stroke-[2.2]" />
-      <span class="text-[10px] tracking-tight">{{
-        mobileBottomNav[3].name
-      }}</span>
-    </router-link>
+      <Menu class="w-5 h-5 stroke-[2.2]" />
+      <span class="text-[10px] tracking-tight">Lainnya</span>
+    </button>
   </nav>
+
+  <!-- MOBILE ACTION SHEET / DRAWER MENU "LAINNYA" -->
+  <div
+    v-if="isMoreMenuOpen"
+    class="lg:hidden fixed inset-0 z-50 bg-ink-900/50 backdrop-blur-sm flex flex-col justify-end transition-opacity"
+    @click="isMoreMenuOpen = false"
+  >
+    <div
+      class="bg-paper-0 rounded-t-3xl p-6 space-y-5 border-t border-line-200 shadow-card animate-in slide-in-from-bottom duration-200 max-h-[80vh] overflow-y-auto"
+      @click.stop
+    >
+      <!-- Header Drawer -->
+      <div
+        class="flex items-center justify-between pb-2 border-b border-line-200"
+      >
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-violet-600"></div>
+          <h3 class="font-display font-bold text-base text-ink-900">
+            Menu & Fitur Lainnya
+          </h3>
+        </div>
+        <button
+          type="button"
+          @click="isMoreMenuOpen = false"
+          class="p-1.5 text-ink-400 hover:text-ink-900 rounded-full hover:bg-base-50 transition-colors cursor-pointer"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <!-- List Menu Fitur Lainnya -->
+      <div class="grid grid-cols-1 gap-2.5">
+        <router-link
+          v-for="item in mobileMoreItems"
+          :key="item.path"
+          :to="item.path"
+          @click="isMoreMenuOpen = false"
+          class="flex items-center gap-3.5 p-3 rounded-2xl bg-base-50/60 hover:bg-violet-50/80 border border-line-200/80 hover:border-violet-200 transition-all cursor-pointer group"
+          :class="{
+            'bg-violet-50 border-violet-300': route.path === item.path,
+          }"
+        >
+          <div
+            class="w-10 h-10 rounded-xl bg-paper-0 border border-line-200 text-violet-600 flex items-center justify-center shrink-0 shadow-soft group-hover:scale-105 transition-transform"
+          >
+            <component :is="item.icon" class="w-5 h-5 stroke-[2.2]" />
+          </div>
+
+          <div class="flex-1 truncate">
+            <h4
+              class="font-display font-bold text-xs text-ink-900 group-hover:text-violet-600 transition-colors"
+            >
+              {{ item.name }}
+            </h4>
+            <p class="text-[11px] text-ink-400 font-medium truncate">
+              {{ item.desc }}
+            </p>
+          </div>
+
+          <ChevronRight
+            class="w-4 h-4 text-ink-300 group-hover:text-violet-600 transition-colors shrink-0"
+          />
+        </router-link>
+      </div>
+
+      <!-- Tombol Keluar di Drawer -->
+      <div class="pt-2">
+        <button
+          type="button"
+          @click="
+            isMoreMenuOpen = false;
+            authStore.logout();
+          "
+          class="w-full flex items-center justify-center gap-2 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-2xl transition-colors cursor-pointer"
+        >
+          <LogOut class="w-4 h-4 stroke-[2.2]" />
+          <span>Keluar dari Aplikasi</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
