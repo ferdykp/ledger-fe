@@ -517,7 +517,7 @@ async function fetchCashFlowData() {
               Transaksi Terakhir
             </h2>
             <router-link
-              to="/transactions"
+              to="/history"
               class="text-xs font-bold text-violet-600 hover:underline"
             >
               Lihat Semua
