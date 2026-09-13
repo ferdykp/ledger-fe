@@ -434,7 +434,8 @@ async function handleSubmit() {
             >
             <input
               v-model="formattedAmount"
-              type="text"
+              type="tel"
+              inputmode="numeric"
               placeholder="0"
               required
               class="w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
@@ -835,7 +836,8 @@ async function handleSubmit() {
               >
               <input
                 v-model="formattedNewBalance"
-                type="text"
+                type="tel"
+                inputmode="numeric"
                 placeholder="0"
                 class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
               />

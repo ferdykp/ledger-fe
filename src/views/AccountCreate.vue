@@ -185,7 +185,8 @@ async function handleSubmit() {
             </span>
             <input
               v-model="formattedBalance"
-              type="text"
+              type="tel"
+              inputmode="numeric"
               placeholder="0"
               class="w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
             />

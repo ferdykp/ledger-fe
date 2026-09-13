@@ -529,7 +529,8 @@ async function handleDeleteGoal() {
               >
               <input
                 v-model="formattedTargetAmount"
-                type="text"
+                type="tel"
+                inputmode="numeric"
                 required
                 placeholder="0"
                 class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
@@ -629,7 +630,8 @@ async function handleDeleteGoal() {
               >
               <input
                 v-model="formattedDepositAmount"
-                type="text"
+                type="tel"
+                inputmode="numeric"
                 required
                 placeholder="0"
                 class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
