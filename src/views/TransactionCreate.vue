@@ -332,6 +332,7 @@ async function handleSubmit() {
   isLoading.value = true;
   try {
     await api.post("/api/transactions", form.value);
+    window.dispatchEvent(new Event("ledger:data-changed"));
     notifyStore.notify({
       message: "Transaksi berhasil dicatat!",
       type: "success",

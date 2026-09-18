@@ -1,6 +1,6 @@
 <!-- ledger-web/src/views/TransactionHistory.vue -->
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
@@ -70,15 +70,29 @@ onMounted(async () => {
 async function fetchTransactions() {
   isLoading.value = true;
   try {
-    const res = await api.get("/api/transactions");
+    const params = { limit: 500 };
+    if (searchQuery.value.trim()) params.search = searchQuery.value.trim();
+    if (selectedCategory.value !== "all") params.category_id = selectedCategory.value;
+    if (selectedAccount.value !== "all") params.account_id = selectedAccount.value;
+    if (selectedType.value !== "all") params.type = selectedType.value;
+    if (selectedTime.value === "this_month") params.month = new Date().toISOString().slice(0, 7);
+    if (selectedTime.value === "last_month") {
+      const d = new Date(); d.setMonth(d.getMonth() - 1);
+      params.month = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    }
+    const res = await api.get("/api/transactions", { params });
     transactions.value = res.data.data || res.data || [];
   } catch (err) {
     console.warn("Gagal memuat riwayat transaksi:", err.message);
     transactions.value = [];
-  } finally {
-    isLoading.value = false;
-  }
+  } finally { isLoading.value = false; }
 }
+
+let filterTimer;
+watch([searchQuery, selectedTime, selectedCategory, selectedAccount, selectedType], () => {
+  clearTimeout(filterTimer);
+  filterTimer = setTimeout(fetchTransactions, 250);
+});
 
 // Filtering Logic
 const filteredTransactions = computed(() => {
@@ -166,6 +180,7 @@ async function handleDelete() {
   isDeleting.value = true;
   try {
     await api.delete(`/api/transactions/${transactionToDelete.value.id}`);
+    window.dispatchEvent(new Event("ledger:data-changed"));
 
     // Hapus dari state lokal
     transactions.value = transactions.value.filter(

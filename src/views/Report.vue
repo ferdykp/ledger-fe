@@ -1,6 +1,7 @@
 <!-- ledger-web/src/views/Report.vue -->
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import VueApexCharts from "vue3-apexcharts";
 import { formatRupiah } from "@/utils/formatters";
 import {
   Calendar,
@@ -29,49 +30,39 @@ function getPrevMonthStr(monthStr) {
 
 const selectedMonth = ref(getCurrentMonthStr());
 const isLoading = ref(false);
-const transactions = ref([]);
-const prevTransactions = ref([]);
-
-onMounted(() => {
-  fetchReportData();
-});
+const report = ref({ income: 0, expense: 0, net: 0, previous: { income: 0, expense: 0, net: 0 }, categories: [], weekly: [] });
 
 async function fetchReportData() {
   isLoading.value = true;
   try {
-    const prevMonth = getPrevMonthStr(selectedMonth.value);
-    const [curRes, prevRes] = await Promise.all([
-      api.get(`/api/transactions?month=${selectedMonth.value}`),
-      api.get(`/api/transactions?month=${prevMonth}`),
-    ]);
-    transactions.value = curRes.data.data || curRes.data || [];
-    prevTransactions.value = prevRes.data.data || prevRes.data || [];
+    const res = await api.get("/api/reports/monthly", { params: { month: selectedMonth.value } });
+    report.value = res.data.data;
   } catch (err) {
     console.warn("Gagal memuat data laporan:", err.message);
-    transactions.value = [];
-    prevTransactions.value = [];
-  } finally {
-    isLoading.value = false;
-  }
+    report.value = { income: 0, expense: 0, net: 0, previous: { income: 0, expense: 0, net: 0 }, categories: [], weekly: [] };
+  } finally { isLoading.value = false; }
 }
 
-function sumByType(list, type) {
-  return list
-    .filter((t) => t.type === type)
-    .reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
-}
+let liveTimer;
+onMounted(() => {
+  fetchReportData();
+  window.addEventListener("focus", fetchReportData);
+  window.addEventListener("ledger:data-changed", fetchReportData);
+  liveTimer = setInterval(fetchReportData, 30000);
+});
+onUnmounted(() => {
+  window.removeEventListener("focus", fetchReportData);
+  window.removeEventListener("ledger:data-changed", fetchReportData);
+  clearInterval(liveTimer);
+});
 
 // Total bulan ini
-const totalIncome = computed(() => sumByType(transactions.value, "income"));
-const totalExpense = computed(() => sumByType(transactions.value, "expense"));
-const netSavings = computed(() => totalIncome.value - totalExpense.value);
-
-// Total bulan lalu (untuk perbandingan)
-const prevIncome = computed(() => sumByType(prevTransactions.value, "income"));
-const prevExpense = computed(() =>
-  sumByType(prevTransactions.value, "expense"),
-);
-const prevNetSavings = computed(() => prevIncome.value - prevExpense.value);
+const totalIncome = computed(() => Number(report.value.income || 0));
+const totalExpense = computed(() => Number(report.value.expense || 0));
+const netSavings = computed(() => Number(report.value.net || 0));
+const prevIncome = computed(() => Number(report.value.previous?.income || 0));
+const prevExpense = computed(() => Number(report.value.previous?.expense || 0));
+const prevNetSavings = computed(() => Number(report.value.previous?.net || 0));
 
 // null artinya "tidak ada data bulan lalu untuk dibandingkan"
 function pctChange(current, previous) {
@@ -106,30 +97,32 @@ const savingsChangeLabel = computed(() =>
 );
 
 // Breakdown Pengeluaran per Kategori (diurutkan dari terbesar)
-const categoryBreakdown = computed(() => {
-  const map = {};
-  transactions.value
-    .filter((t) => t.type === "expense")
-    .forEach((t) => {
-      const name = t.category?.name || "Lainnya";
-      map[name] = (map[name] || 0) + parseFloat(t.amount || 0);
-    });
+const categoryBreakdown = computed(() => (report.value.categories || []).map((x) => ({ name: x.name, amount: Number(x.amount || 0) })));
 
-  const colors = ["#F0473E", "#6C4CF1", "#FFB020", "#94A3B8"];
-  return Object.entries(map)
-    .map(([name, amount], idx) => ({
-      name,
-      amount,
-      color: colors[idx % colors.length],
-    }))
-    .sort((a, b) => b.amount - a.amount);
-});
+const weeklySeries = computed(() => [
+  { name: "Pemasukan", data: (report.value.weekly || []).map(x => Number(x.income || 0)) },
+  { name: "Pengeluaran", data: (report.value.weekly || []).map(x => Number(x.expense || 0)) },
+]);
+const weeklyChartOptions = computed(() => ({
+  chart: { type: "area", toolbar: { show: false }, animations: { enabled: true } },
+  dataLabels: { enabled: false }, stroke: { curve: "smooth", width: 3 },
+  xaxis: { categories: (report.value.weekly || []).map(x => x.label) },
+  yaxis: { labels: { formatter: (v) => formatRupiah(v) } },
+  tooltip: { y: { formatter: (v) => formatRupiah(v) } }, legend: { show: false },
+}));
+const categorySeries = computed(() => categoryBreakdown.value.map(x => x.amount));
+const categoryChartOptions = computed(() => ({
+  chart: { type: "donut" }, labels: categoryBreakdown.value.map(x => x.name),
+  legend: { position: "bottom" }, dataLabels: { enabled: false },
+  tooltip: { y: { formatter: (v) => formatRupiah(v) } },
+  plotOptions: { pie: { donut: { size: "70%" } } },
+}));
 
 const topCategory = computed(() => categoryBreakdown.value[0] || null);
 
 // Insight riil, dihitung dari data transaksi — bukan teks statis
 const insight = computed(() => {
-  if (transactions.value.length === 0) {
+  if (totalIncome.value === 0 && totalExpense.value === 0) {
     return {
       type: "neutral",
       text: "Belum ada transaksi bulan ini. Yuk mulai catat pemasukan dan pengeluaranmu.",
@@ -344,53 +337,8 @@ const insightIcon = computed(() => {
         </div>
       </div>
 
-      <!--
-        CATATAN: kurva SVG di bawah ini masih placeholder statis,
-        belum menggambar data mingguan asli. Kalau mau ini juga
-        dibuat real (per-minggu dari transaksi), beri tahu saya —
-        perlu logika agregasi mingguan terpisah.
-      -->
-      <div
-        class="h-64 relative flex flex-col justify-between pt-4 border-b border-line-200"
-      >
-        <svg
-          class="w-full h-full overflow-visible"
-          viewBox="0 0 400 150"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#10B981" stop-opacity="0.2" />
-              <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M 0,80 Q 100,20 200,40 T 400,10 L 400,150 L 0,150 Z"
-            fill="url(#incomeGrad)"
-          />
-          <path
-            d="M 0,80 Q 100,20 200,40 T 400,10"
-            fill="none"
-            stroke="#10B981"
-            stroke-width="3"
-          />
-          <path
-            d="M 0,130 Q 100,100 200,85 T 400,75"
-            fill="none"
-            stroke="#EF4444"
-            stroke-width="3"
-          />
-        </svg>
-
-        <div
-          class="flex justify-between text-[11px] font-bold text-ink-400 pt-2"
-        >
-          <span>Week 1</span>
-          <span>Week 2</span>
-          <span>Week 3</span>
-          <span>Week 4</span>
-        </div>
-      </div>
+      <div v-if="isLoading" class="h-64 flex items-center justify-center text-sm text-ink-400">Memuat grafik...</div>
+      <VueApexCharts v-else type="area" height="280" :options="weeklyChartOptions" :series="weeklySeries" />
     </div>
 
     <!-- BOTTOM SECTION: BREAKDOWN KATEGORI & INSIGHT LEDGER -->
@@ -403,84 +351,11 @@ const insightIcon = computed(() => {
           Breakdown Kategori
         </h2>
 
-        <!--
-          CATATAN: ring donut di bawah masih pakai persentase statis
-          (35/25/20/20). Kalau mau real, beri tahu saya — perlu
-          hitung persentase dari categoryBreakdown yang sudah dihitung
-          di atas dan generate stroke-dasharray secara dinamis.
-        -->
-        <div class="flex items-center justify-center py-4">
-          <div class="relative w-48 h-48 flex items-center justify-center">
-            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                class="text-rose-400"
-                stroke-width="4.5"
-                stroke-dasharray="35, 100"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                class="text-violet-600"
-                stroke-width="4.5"
-                stroke-dasharray="25, 100"
-                stroke-dashoffset="-35"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                class="text-amber-400"
-                stroke-width="4.5"
-                stroke-dasharray="20, 100"
-                stroke-dashoffset="-60"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                class="text-slate-300"
-                stroke-width="4.5"
-                stroke-dasharray="20, 100"
-                stroke-dashoffset="-80"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-            <div
-              class="absolute inset-0 flex flex-col items-center justify-center text-center"
-            >
-              <span
-                class="text-[10px] font-bold text-ink-400 uppercase tracking-wider block"
-                >Total</span
-              >
-              <span class="font-mono-money font-black text-lg text-ink-900">
-                {{ formatRupiah(totalExpense) }}
-              </span>
-            </div>
-          </div>
+        <div v-if="categoryBreakdown.length" class="py-2">
+          <VueApexCharts type="donut" height="310" :options="categoryChartOptions" :series="categorySeries" />
+          <div class="text-center -mt-2 text-xs text-ink-500">Total pengeluaran: <strong>{{ formatRupiah(totalExpense) }}</strong></div>
         </div>
-
-        <!-- Category Legends: sekarang dari data riil, urut terbesar -->
-        <div
-          class="flex items-center justify-center gap-4 flex-wrap text-xs font-semibold text-ink-600"
-        >
-          <div
-            v-for="cat in categoryBreakdown.slice(0, 4)"
-            :key="cat.name"
-            class="flex items-center gap-1.5"
-          >
-            <span
-              class="w-3 h-3 rounded-full"
-              :style="{ backgroundColor: cat.color }"
-            ></span>
-            <span>{{ cat.name }}</span>
-          </div>
-          <span v-if="categoryBreakdown.length === 0" class="text-ink-400">
-            Belum ada pengeluaran bulan ini
-          </span>
-        </div>
+        <div v-else class="py-16 text-center text-sm text-ink-400">Belum ada pengeluaran bulan ini</div>
       </div>
 
       <!-- Insight Ledger (Card Kanan Gradient Purple) — SEKARANG DINAMIS -->

@@ -1,6 +1,6 @@
 <!-- ledger-web/src/views/Dashboard.vue -->
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
 import { useAuthStore } from "@/stores/auth";
@@ -185,12 +185,20 @@ function getLastNMonths(n) {
   return months;
 }
 
-onMounted(async () => {
-  accountStore.fetchAccounts();
-  fetchTransactionsData();
-  fetchCashFlowData();
-  budgetStore.fetchBudgets(currentMonthStr.value);
-  goalStore.fetchGoals();
+let liveTimer;
+async function refreshDashboard() {
+  await Promise.all([accountStore.fetchAccounts(), fetchTransactionsData(), fetchCashFlowData(), budgetStore.fetchBudgets(currentMonthStr.value), goalStore.fetchGoals()]);
+}
+onMounted(() => {
+  refreshDashboard();
+  window.addEventListener("focus", refreshDashboard);
+  window.addEventListener("ledger:data-changed", refreshDashboard);
+  liveTimer = setInterval(refreshDashboard, 30000);
+});
+onUnmounted(() => {
+  window.removeEventListener("focus", refreshDashboard);
+  window.removeEventListener("ledger:data-changed", refreshDashboard);
+  clearInterval(liveTimer);
 });
 
 async function fetchTransactionsData() {
@@ -218,26 +226,11 @@ async function fetchCashFlowData() {
   isLoadingCashFlow.value = true;
   cashFlowMonths.value = getLastNMonths(6);
   try {
-    // CATATAN: ini melakukan 6 request paralel (per bulan). Kalau backend
-    // punya endpoint ringkasan seperti /api/transactions/summary?months=6,
-    // sebaiknya diganti ke situ supaya lebih efisien.
-    const results = await Promise.all(
-      cashFlowMonths.value.map((m) =>
-        api.get(`/api/transactions?month=${m.monthStr}`),
-      ),
-    );
-    cashFlowIncome.value = results.map((res) => {
-      const list = res.data.data || res.data || [];
-      return list
-        .filter((t) => t.type === "income")
-        .reduce((a, t) => a + parseFloat(t.amount || 0), 0);
-    });
-    cashFlowExpense.value = results.map((res) => {
-      const list = res.data.data || res.data || [];
-      return list
-        .filter((t) => t.type === "expense")
-        .reduce((a, t) => a + parseFloat(t.amount || 0), 0);
-    });
+    const res = await api.get("/api/reports/cash-flow", { params: { months: 6 } });
+    const rows = res.data.data || [];
+    cashFlowMonths.value = rows.map((r) => ({ monthStr: r.month, label: r.label }));
+    cashFlowIncome.value = rows.map((r) => Number(r.income || 0));
+    cashFlowExpense.value = rows.map((r) => Number(r.expense || 0));
   } catch (err) {
     console.warn("Gagal memuat data arus kas:", err.message);
     cashFlowIncome.value = cashFlowMonths.value.map(() => 0);
