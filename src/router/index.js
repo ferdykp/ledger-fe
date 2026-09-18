@@ -5,6 +5,8 @@ import { useAuthStore } from "@/stores/auth";
 import AppLayout from "@/layouts/AppLayout.vue";
 import Login from "@/views/Login.vue";
 import Register from "@/views/Register.vue";
+import ForgotPassword from "@/views/ForgotPassword.vue";
+import ResetPassword from "@/views/ResetPassword.vue";
 import Dashboard from "@/views/Dashboard.vue"; // Import langsung Dashboard
 import TransactionCreate from "@/views/TransactionCreate.vue";
 import AccountCreate from "../views/AccountCreate.vue";
@@ -30,6 +32,8 @@ const routes = [
     component: Login,
     meta: { requiresGuest: true },
   },
+  { path: "/forgot-password", name: "forgot-password", component: ForgotPassword, meta: { requiresGuest: true } },
+  { path: "/reset-password", name: "reset-password", component: ResetPassword, meta: { requiresGuest: true } },
   {
     path: "/register",
     name: "register",
@@ -85,8 +89,8 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
-        path: "/catagory",
-        name: "catagory.index",
+        path: "/categories",
+        name: "categories.index",
         component: Category,
         meta: { requiresAuth: true },
       },

@@ -23,6 +23,9 @@ import {
   ChevronDown,
   User as UserIcon,
   LogOut,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -68,6 +71,25 @@ const theme = ref(localStorage.getItem("theme") || "light");
 const isCloudBackup = ref(true);
 const isSavingProfile = ref(false);
 const isLoggingOut = ref(false);
+const isChangingPassword = ref(false);
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const passwordForm = ref({ current_password: "", password: "", password_confirmation: "" });
+
+async function handleChangePassword() {
+  if (passwordForm.value.password !== passwordForm.value.password_confirmation) {
+    notifyStore.notify({ message: "Konfirmasi password baru tidak sama.", type: "error" }); return;
+  }
+  isChangingPassword.value = true;
+  try {
+    await (await import("@/lib/axios")).default.put("/api/user/password", passwordForm.value);
+    passwordForm.value = { current_password: "", password: "", password_confirmation: "" };
+    notifyStore.notify({ message: "Password berhasil diubah. Perangkat lain telah dikeluarkan.", type: "success" });
+  } catch (err) {
+    const errors = err.response?.data?.errors;
+    notifyStore.notify({ message: errors?.current_password?.[0] || errors?.password?.[0] || err.response?.data?.message || "Gagal mengubah password.", type: "error" });
+  } finally { isChangingPassword.value = false; }
+}
 
 const iconMap = {
   makanan: Utensils,
@@ -299,6 +321,15 @@ async function handleLogout() {
             </h2>
             <ShieldCheck class="w-5 h-5 text-ink-400" />
           </div>
+
+          <!-- Change Password -->
+          <form @submit.prevent="handleChangePassword" class="space-y-3 pb-4 border-b border-line-200">
+            <div class="flex items-center gap-2"><KeyRound class="w-4 h-4 text-violet-600"/><p class="font-display font-bold text-xs text-ink-900">Ganti Password</p></div>
+            <div class="relative"><input v-model="passwordForm.current_password" :type="showCurrentPassword ? 'text' : 'password'" required autocomplete="current-password" placeholder="Password saat ini" class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/><button type="button" @click="showCurrentPassword=!showCurrentPassword" class="absolute right-3 top-3 text-ink-400"><EyeOff v-if="showCurrentPassword" class="w-4 h-4"/><Eye v-else class="w-4 h-4"/></button></div>
+            <div class="relative"><input v-model="passwordForm.password" :type="showNewPassword ? 'text' : 'password'" required minlength="8" autocomplete="new-password" placeholder="Password baru (min. 8 karakter, huruf & angka)" class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/><button type="button" @click="showNewPassword=!showNewPassword" class="absolute right-3 top-3 text-ink-400"><EyeOff v-if="showNewPassword" class="w-4 h-4"/><Eye v-else class="w-4 h-4"/></button></div>
+            <input v-model="passwordForm.password_confirmation" type="password" required minlength="8" autocomplete="new-password" placeholder="Ulangi password baru" class="w-full h-11 px-4 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/>
+            <button :disabled="isChangingPassword" class="w-full h-10 rounded-xl bg-violet-600 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"><Loader2 v-if="isChangingPassword" class="w-4 h-4 animate-spin"/>Ubah Password</button>
+          </form>
 
           <!-- Backup Cloud Toggle -->
           <div class="flex items-center justify-between pt-1">

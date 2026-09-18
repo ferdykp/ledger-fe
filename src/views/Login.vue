@@ -1,12 +1,13 @@
 <script setup>
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useNotificationStore } from "../stores/notification";
 import logoImg from "../assets/ledger-icon.png";
 import { Mail, Lock, Eye, EyeOff } from "lucide-vue-next";
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
 
@@ -62,6 +63,8 @@ async function handleSubmit() {
           Masuk ke akun Ledger kamu untuk lanjut atur keuangan.
         </p>
       </div>
+
+      <div v-if="route.query.reset === 'success'" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-sm">Password berhasil direset. Silakan masuk dengan password baru.</div>
 
       <!-- Alert Error -->
       <div
