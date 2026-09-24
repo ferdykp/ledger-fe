@@ -27,7 +27,8 @@ async function handleSubmit() {
 
   try {
     await authStore.login(form.value);
-    await router.push("/dashboard");
+    const redirect = route.query.redirect;
+    await router.push(typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard");
   } catch (err) {
     const msg = err.response?.data?.message || "Email atau password salah.";
     errorMessage.value = msg;
