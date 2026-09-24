@@ -18,6 +18,7 @@ import Goal from "../views/Goal.vue";
 import Report from "../views/Report.vue";
 import Settings from "../views/Settings.vue";
 import SmartImport from "../views/SmartImport.vue";
+import Bills from "../views/Bills.vue";
 
 const Placeholder = (title) => ({
   template: `<div class="p-6 bg-paper-0 border border-line-200 rounded-md">
@@ -74,6 +75,7 @@ const routes = [
       { path: "transactions", name: "transactions", component: TransactionHistory },
       { path: "transactions/:id/edit", name: "transactions.edit", component: TransactionCreate },
       { path: "scan", name: "scan", component: SmartImport },
+      { path: "bills", name: "bills", component: Bills },
       { path: "budgets", redirect: "/budget" },
       { path: "reports", redirect: "/report" },
 

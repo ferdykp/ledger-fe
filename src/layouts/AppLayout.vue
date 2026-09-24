@@ -1,21 +1,2 @@
-<!-- ledger-web/src/layouts/AppLayout.vue -->
-<script setup>
-import Sidebar from "@/components/Sidebar.vue";
-import PwaInstallPrompt from "@/components/PwaInstallPrompt.vue";
-</script>
-
-<template>
-  <div
-    class="min-h-screen bg-base-50 text-ink-900 font-body flex flex-col lg:flex-row"
-  >
-    <Sidebar />
-
-    <!-- Konten Utama Responsive -->
-    <main class="flex-1 p-4 md:p-8 pb-24 lg:pb-8 max-w-[1600px] mx-auto w-full">
-      <router-view />
-    </main>
-
-    <!-- Modal Prompt Install PWA -->
-    <PwaInstallPrompt />
-  </div>
-</template>
+<script setup>import Sidebar from '@/components/Sidebar.vue';import PwaInstallPrompt from '@/components/PwaInstallPrompt.vue';</script>
+<template><div class="min-h-screen bg-base-50 text-ink-900 font-body flex"><Sidebar/><main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 xl:px-10 py-5 md:py-8 pb-28 lg:pb-10"><div class="w-full max-w-[1560px] mx-auto"><router-view/></div></main><PwaInstallPrompt/></div></template>
