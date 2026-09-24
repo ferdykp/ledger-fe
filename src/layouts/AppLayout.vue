@@ -1,2 +1,17 @@
-<script setup>import Sidebar from '@/components/Sidebar.vue';import PwaInstallPrompt from '@/components/PwaInstallPrompt.vue';</script>
-<template><div class="min-h-screen bg-base-50 text-ink-900 font-body flex"><Sidebar/><main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 xl:px-10 py-5 md:py-8 pb-28 lg:pb-10"><div class="w-full max-w-[1560px] mx-auto"><router-view/></div></main><PwaInstallPrompt/></div></template>
+<script setup>
+import Sidebar from "@/components/Sidebar.vue";
+</script>
+<template>
+  <div class="app-frame">
+    <Sidebar />
+    <main class="app-content">
+      <div class="app-content-inner">
+        <router-view v-slot="{ Component, route }">
+          <transition name="content-page" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </transition>
+        </router-view>
+      </div>
+    </main>
+  </div>
+</template>

@@ -22,3 +22,28 @@ input:not([type=checkbox]):not([type=radio]),select,textarea{border-color:var(--
 @media(max-width:1180px){.bank-hero-grid{grid-template-columns:1fr}.bank-metrics{grid-template-columns:repeat(3,1fr)}.bank-metric-card.savings{grid-column:auto}.bank-content-grid,.bank-bottom-grid{grid-template-columns:1fr}.bank-side-stack{display:grid;grid-template-columns:1fr 1fr}}
 @media(max-width:720px){.bank-dashboard{gap:15px}.bank-topbar{align-items:flex-start}.bank-topbar h1{font-size:24px}.bank-subtitle{display:none}.bank-header-actions .bank-icon-action{display:none}.bank-primary-action{width:44px;padding:0;justify-content:center;font-size:0}.bank-balance-card{padding:22px 18px;min-height:290px;border-radius:23px}.bank-main-balance{font-size:36px}.bank-balance-meta{align-items:flex-start;gap:10px}.bank-balance-meta>span{max-width:55%}.bank-quick-actions{gap:6px}.bank-quick-actions a{flex-direction:column;padding:9px 3px;gap:5px}.bank-quick-actions b{font-size:8px}.bank-metrics{grid-template-columns:1fr 1fr}.bank-metric-card.savings{grid-column:1/-1}.bank-metric-card{padding:16px}.bank-side-stack{display:flex}.bank-panel{border-radius:20px;padding:18px}.bank-chart-panel{overflow:hidden}.bank-chart-legend{justify-content:flex-start}.bank-bottom-grid{grid-template-columns:1fr}.bank-topbar{padding-top:2px}}
 @media(min-width:1024px){aside.w-\[232px\]{width:248px!important}}
+
+/* Ledger V5 — responsive shell, PWA safe areas & motion */
+:root{--app-header-h:64px;--app-nav-h:74px;--ease-ui:cubic-bezier(.22,1,.36,1)}
+.app-root{min-height:100dvh;background:var(--color-base-50);color:var(--color-ink-900)}
+.app-frame{min-height:100dvh;display:flex;background:var(--color-base-50)}
+.app-content{flex:1;min-width:0;padding:32px clamp(20px,3vw,48px) 40px}
+.app-content-inner{width:100%;max-width:1680px;margin-inline:auto}
+.page-enter-active,.page-leave-active,.content-page-enter-active,.content-page-leave-active{transition:opacity .18s var(--ease-ui),transform .22s var(--ease-ui)}
+.page-enter-from,.content-page-enter-from{opacity:0;transform:translateY(7px)}
+.page-leave-to,.content-page-leave-to{opacity:0;transform:translateY(-3px)}
+button,a,.surface-card,.bank-metric-card{transition-property:background-color,border-color,color,box-shadow,transform,opacity;transition-duration:.18s;transition-timing-function:var(--ease-ui)}
+button:active,a:active{transform:scale(.985)}
+/* prevent the fixed PWA header from covering page headings */
+@media(max-width:1023px){
+  .app-content{padding:calc(var(--app-header-h) + env(safe-area-inset-top) + 20px) 16px calc(var(--app-nav-h) + env(safe-area-inset-bottom) + 28px)}
+  .ledger-mobile-header{padding-top:env(safe-area-inset-top);height:calc(var(--app-header-h) + env(safe-area-inset-top))}
+}
+@media(max-width:639px){.app-content{padding-left:14px;padding-right:14px}.bank-dashboard{gap:16px}.bank-topbar{align-items:flex-start}.bank-header-actions{width:100%}.bank-primary-action{flex:1;justify-content:center}}
+@media(min-width:1920px){.app-content{padding-left:56px;padding-right:56px}}
+/* smooth mobile sheets/dialogs */
+.sheet-backdrop{animation:fadeIn .18s var(--ease-ui)}
+.sheet-panel{animation:sheetUp .28s var(--ease-ui)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes sheetUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.page-enter-active,.page-leave-active,.content-page-enter-active,.content-page-leave-active,.sheet-backdrop,.sheet-panel{transition:none!important;animation:none!important}}

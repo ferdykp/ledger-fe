@@ -20,12 +20,6 @@ import Settings from "../views/Settings.vue";
 import SmartImport from "../views/SmartImport.vue";
 import Bills from "../views/Bills.vue";
 
-const Placeholder = (title) => ({
-  template: `<div class="p-6 bg-paper-0 border border-line-200 rounded-md">
-    <h1 class="font-display text-2xl font-medium text-ink-900 mb-2">${title}</h1>
-    <p class="text-sm text-ink-600">Halaman ini sedang dalam tahap pengembangan.</p>
-  </div>`,
-});
 
 const routes = [
   {
@@ -57,7 +51,7 @@ const routes = [
         component: Dashboard, // Gunakan komponen yang diimpor langsung
       },
       {
-        path: "/accounts",
+        path: "accounts",
         name: "accounts",
         component: Account,
         meta: { requiresAuth: true },
@@ -80,37 +74,37 @@ const routes = [
       { path: "reports", redirect: "/report" },
 
       {
-        path: "/transactions/create",
+        path: "transactions/create",
         name: "transactions.create",
         component: TransactionCreate,
         meta: { requiresAuth: true },
       },
       {
-        path: "/categories",
+        path: "categories",
         name: "categories.index",
         component: Category,
         meta: { requiresAuth: true },
       },
       {
-        path: "/budget",
+        path: "budget",
         name: "budget.index",
         component: Budget,
         meta: { requiresAuth: true },
       },
       {
-        path: "/goals",
+        path: "goals",
         name: "goals.index",
         component: Goal,
         meta: { requiresAuth: true },
       },
       {
-        path: "/report",
+        path: "report",
         name: "report.index",
         component: Report,
         meta: { requiresAuth: true },
       },
       {
-        path: "/settings",
+        path: "settings",
         name: "settings.index",
         component: Settings,
         meta: { requiresAuth: true },
@@ -122,6 +116,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior() { return { top: 0, behavior: "smooth" }; },
 });
 
 router.beforeEach(async (to) => {

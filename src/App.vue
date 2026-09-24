@@ -1,33 +1,23 @@
-<!-- ledger-web/src/App.vue -->
 <script setup>
 import { onMounted } from "vue";
 import { useAuthStore } from "./stores/auth";
 import ToastContainer from "./components/ToastContainer.vue";
-import PwaInstallPrompt from "./components/PwaInstallPrompt.vue"; // <--- IMPORT DISINI
-
+import PwaInstallPrompt from "./components/PwaInstallPrompt.vue";
 const authStore = useAuthStore();
-
 onMounted(() => {
   const savedTheme = localStorage.getItem("theme") || "light";
-  if (savedTheme === "dark") {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+  document.documentElement.classList.toggle("dark", savedTheme === "dark");
   authStore.fetchUser();
 });
 </script>
-
 <template>
-  <div
-    class="min-h-screen bg-paper-50 text-ink-900 font-body antialiased relative"
-  >
-    <router-view />
-
-    <!-- Floating Toast Notifikasi -->
+  <div class="app-root">
+    <router-view v-slot="{ Component, route }">
+      <transition name="page" mode="out-in">
+        <component :is="Component" :key="route.path" />
+      </transition>
+    </router-view>
     <ToastContainer />
-
-    <!-- Prompt Banner Install PWA -->
     <PwaInstallPrompt />
   </div>
 </template>
