@@ -26,6 +26,14 @@ import {
   Smartphone,
   Gift,
   Coins,
+  Eye,
+  EyeOff,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ScanLine,
+  Send,
+  ChevronRight,
+  Sparkles,
 } from "lucide-vue-next";
 import api from "@/lib/axios";
 
@@ -45,6 +53,19 @@ const {
 const { goals, isLoading: isLoadingGoals } = storeToRefs(goalStore);
 
 const recentTransactions = ref([]);
+const balanceVisible = ref(localStorage.getItem("ledger:balance-visible") !== "false");
+function toggleBalanceVisibility() {
+  balanceVisible.value = !balanceVisible.value;
+  localStorage.setItem("ledger:balance-visible", String(balanceVisible.value));
+}
+function privateMoney(value) {
+  return balanceVisible.value ? formatRupiah(value) : "Rp ••••••••";
+}
+function privateTxMoney(tx) {
+  if (!balanceVisible.value) return "Rp ••••••";
+  return `${tx.type === "income" ? "+" : "-"}${formatRupiah(Number(tx.amount || 0))}`;
+}
+const monthlySavings = computed(() => monthlyIncome.value - monthlyExpense.value);
 const allMonthlyTransactions = ref([]);
 const isLoadingTransactions = ref(false);
 
@@ -242,342 +263,101 @@ async function fetchCashFlowData() {
 </script>
 
 <template>
-  <div class="space-y-6 font-body max-w-[1400px] mx-auto">
-    <!-- Subtitle Tanggal & Header Salam -->
-    <div
-      class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-    >
+  <div class="bank-dashboard">
+    <header class="bank-topbar">
       <div>
-        <p class="text-xs font-semibold text-ink-400">
-          {{
-            new Date().toLocaleDateString("id-ID", {
-              month: "long",
-              year: "numeric",
-            })
-          }}
-        </p>
-        <h1
-          class="font-display text-2xl md:text-3xl font-bold text-ink-900 mt-0.5"
-        >
-          Gimana kabar dompetmu bulan ini, {{ authStore.user?.name || "User" }}?
-        </h1>
+        <p class="bank-kicker">{{ new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" }) }}</p>
+        <h1>Selamat datang, {{ authStore.user?.name || "User" }}.</h1>
+        <p class="bank-subtitle">Ringkasan keuanganmu hari ini.</p>
       </div>
-
-      <router-link
-        to="/transactions/create"
-        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-paper-0 rounded-2xl font-bold text-sm shadow-violet btn-bounce self-start sm:self-auto"
-      >
-        <Plus class="w-4 h-4 stroke-[2.5]" />
-        <span>Transaksi Baru</span>
-      </router-link>
-    </div>
-
-    <!-- MAIN GRID DASHBOARD -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- KOLOM KIRI (7/12) -->
-      <div class="lg:col-span-7 space-y-6">
-        <!-- Hero Balance Card -->
-        <div
-          class="bg-violet-100/60 border border-violet-200/50 rounded-3xl p-6 sm:p-8 space-y-6 shadow-soft"
-        >
-          <div class="space-y-1">
-            <span
-              class="text-xs font-bold text-violet-600 uppercase tracking-wider block"
-            >
-              Total Saldo (Semua Akun)
-            </span>
-            <div
-              class="font-mono-money font-black text-3xl sm:text-4xl md:text-5xl text-violet-950 tracking-tight"
-            >
-              {{ formatRupiah(totalBalance) }}
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div
-              class="bg-paper-0/80 backdrop-blur-sm rounded-2xl p-3.5 flex items-center gap-3 shadow-soft border border-paper-0"
-            >
-              <div
-                class="w-9 h-9 rounded-full bg-income-100 text-income-600 flex items-center justify-center shrink-0"
-              >
-                <TrendingUp class="w-4 h-4" />
-              </div>
-              <div>
-                <span
-                  class="text-[10px] font-bold text-ink-400 uppercase tracking-wider block"
-                  >PEMASUKAN</span
-                >
-                <span
-                  class="font-mono-money font-extrabold text-sm text-ink-900"
-                >
-                  {{ formatRupiah(monthlyIncome) }}
-                </span>
-              </div>
-            </div>
-
-            <div
-              class="bg-paper-0/80 backdrop-blur-sm rounded-2xl p-3.5 flex items-center gap-3 shadow-soft border border-paper-0"
-            >
-              <div
-                class="w-9 h-9 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center shrink-0"
-              >
-                <TrendingDown class="w-4 h-4" />
-              </div>
-              <div>
-                <span
-                  class="text-[10px] font-bold text-ink-400 uppercase tracking-wider block"
-                  >PENGELUARAN</span
-                >
-                <span
-                  class="font-mono-money font-extrabold text-sm text-ink-900"
-                >
-                  {{ formatRupiah(monthlyExpense) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Arus Kas Chart Section — REAL, dari 6 bulan transaksi -->
-        <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-4"
-        >
-          <div class="flex items-center justify-between">
-            <h2 class="font-display font-bold text-base text-ink-900">
-              Arus Kas (6 Bulan Terakhir)
-            </h2>
-            <div class="flex items-center gap-4 text-xs font-semibold">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="text-ink-600">Pemasukan</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span class="text-ink-600">Pengeluaran</span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="isLoadingCashFlow"
-            class="h-56 flex items-center justify-center text-xs text-ink-400"
-          >
-            Memuat data arus kas...
-          </div>
-          <VueApexCharts
-            v-else
-            type="area"
-            height="230"
-            :options="cashFlowChartOptions"
-            :series="cashFlowSeries"
-          />
-        </div>
-
-        <!-- Insight Kategori Pengeluaran Terbesar — REAL, baru -->
-        <div
-          v-if="topSpendingCategory"
-          class="bg-paper-0 border border-line-200 rounded-3xl p-5 shadow-soft flex items-center gap-4"
-        >
-          <div
-            class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-500 flex items-center justify-center shrink-0"
-          >
-            <Flame class="w-5 h-5" />
-          </div>
-          <div>
-            <p
-              class="text-[11px] font-bold text-ink-400 uppercase tracking-wider"
-            >
-              Pengeluaran Terbesar Bulan Ini
-            </p>
-            <p class="font-display font-bold text-sm text-ink-900">
-              {{ topSpendingCategory.name }} ·
-              {{ formatRupiah(topSpendingCategory.amount) }}
-            </p>
-          </div>
-        </div>
+      <div class="bank-header-actions">
+        <router-link to="/scan" class="bank-icon-action" title="Scan bukti"><ScanLine class="w-5 h-5" /></router-link>
+        <router-link to="/transactions/create" class="bank-primary-action"><Plus class="w-4 h-4"/> Transaksi Baru</router-link>
       </div>
+    </header>
 
-      <!-- KOLOM KANAN (5/12) -->
-      <div class="lg:col-span-5 space-y-6">
-        <!-- Sisa Budget Bulanan Widget — REAL, dari budget store -->
-        <div
-          class="bg-violet-100/60 border border-violet-200/50 rounded-3xl p-6 shadow-soft space-y-3"
-        >
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-ink-600 block"
-              >Sisa Budget Bulanan</span
-            >
-            <Wallet class="w-4 h-4 text-violet-600" />
-          </div>
+    <section class="bank-hero-grid">
+      <article class="bank-balance-card">
+        <div class="bank-balance-top">
+          <div><span class="bank-card-label">TOTAL SALDO</span><span class="bank-live-pill"><i></i> Semua akun</span></div>
+          <button class="bank-eye" @click="toggleBalanceVisibility" :aria-label="balanceVisible ? 'Sembunyikan nominal' : 'Tampilkan nominal'" :title="balanceVisible ? 'Sembunyikan nominal' : 'Tampilkan nominal'">
+            <Eye v-if="balanceVisible" class="w-5 h-5"/><EyeOff v-else class="w-5 h-5"/>
+          </button>
+        </div>
+        <div class="bank-main-balance" :class="{ 'bank-masked': !balanceVisible }">{{ privateMoney(totalBalance) }}</div>
+        <div class="bank-balance-meta"><span>Saldo tersedia dari {{ accountStore.accounts?.length || 0 }} akun</span><router-link to="/accounts">Kelola akun <ChevronRight class="w-4 h-4"/></router-link></div>
+        <div class="bank-quick-actions">
+          <router-link to="/transactions/create?type=income"><span><ArrowDownLeft/></span><b>Pemasukan</b></router-link>
+          <router-link to="/transactions/create?type=expense"><span><ArrowUpRight/></span><b>Pengeluaran</b></router-link>
+          <router-link to="/transactions/create?type=transfer"><span><Send/></span><b>Transfer</b></router-link>
+          <router-link to="/scan"><span><ScanLine/></span><b>Scan Bukti</b></router-link>
+        </div>
+      </article>
 
-          <div v-if="isLoadingBudget" class="text-xs text-ink-400 py-2">
-            Memuat budget...
-          </div>
+      <div class="bank-metrics">
+        <article class="bank-metric-card income">
+          <div class="bank-metric-head"><span><ArrowDownLeft/></span><small>Bulan ini</small></div>
+          <p>Pemasukan</p><strong>{{ privateMoney(monthlyIncome) }}</strong>
+          <div class="bank-metric-foot">Dana masuk bulan berjalan</div>
+        </article>
+        <article class="bank-metric-card expense">
+          <div class="bank-metric-head"><span><ArrowUpRight/></span><small>Bulan ini</small></div>
+          <p>Pengeluaran</p><strong>{{ privateMoney(monthlyExpense) }}</strong>
+          <div class="bank-metric-foot">Total belanja bulan berjalan</div>
+        </article>
+        <article class="bank-metric-card savings">
+          <div class="bank-metric-head"><span><Sparkles/></span><small>Net cash</small></div>
+          <p>Selisih Kas</p><strong>{{ privateMoney(monthlySavings) }}</strong>
+          <div class="bank-metric-foot">Pemasukan dikurangi pengeluaran</div>
+        </article>
+      </div>
+    </section>
 
+    <section class="bank-content-grid">
+      <article class="bank-panel bank-chart-panel">
+        <div class="bank-panel-head"><div><span class="bank-section-kicker">ANALITIK</span><h2>Arus Kas</h2><p>Pergerakan uang 6 bulan terakhir</p></div><router-link to="/report" class="bank-text-link">Laporan lengkap <ChevronRight/></router-link></div>
+        <div class="bank-chart-legend"><span><i class="income-dot"></i>Pemasukan</span><span><i class="expense-dot"></i>Pengeluaran</span></div>
+        <div v-if="isLoadingCashFlow" class="bank-loading">Memuat arus kas...</div>
+        <VueApexCharts v-else type="area" height="285" :options="cashFlowChartOptions" :series="cashFlowSeries" />
+      </article>
+
+      <aside class="bank-side-stack">
+        <article class="bank-panel bank-budget">
+          <div class="bank-panel-head compact"><div><span class="bank-section-kicker">PERENCANAAN</span><h2>Budget Bulanan</h2></div><Wallet/></div>
+          <div v-if="isLoadingBudget" class="bank-loading small">Memuat budget...</div>
           <template v-else-if="hasBudgetSet">
-            <div
-              class="font-mono-money font-black text-2xl sm:text-3xl text-violet-700"
-            >
-              {{ formatRupiah(remainingBudget) }}
-            </div>
-            <div class="space-y-1 pt-1">
-              <div
-                class="w-full bg-violet-200/60 h-2.5 rounded-full overflow-hidden"
-              >
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :class="
-                    totalBudgetPercentage >= 90
-                      ? 'bg-rose-500'
-                      : 'bg-violet-600'
-                  "
-                  :style="{ width: `${Math.min(100, totalBudgetPercentage)}%` }"
-                ></div>
-              </div>
-              <p class="text-[11px] font-bold text-ink-400 text-right">
-                {{ totalBudgetPercentage }}% Terpakai
-              </p>
-            </div>
+            <strong>{{ privateMoney(remainingBudget) }}</strong><p>tersisa dari {{ privateMoney(totalBudgetLimit) }}</p>
+            <div class="bank-progress"><i :style="{width: `${Math.min(100,totalBudgetPercentage)}%`}"></i></div>
+            <div class="bank-progress-label"><span>{{ totalBudgetPercentage }}% terpakai</span><router-link to="/budget">Kelola</router-link></div>
           </template>
+          <div v-else class="bank-empty-compact"><p>Belum ada budget untuk bulan ini.</p><router-link to="/budget">Atur budget <ChevronRight/></router-link></div>
+        </article>
 
-          <div v-else class="space-y-2 py-1">
-            <p class="text-xs font-semibold text-ink-600">
-              Belum ada budget bulan ini.
-            </p>
-            <router-link
-              to="/budget"
-              class="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 hover:underline"
-            >
-              Atur Budget Bulanan →
-            </router-link>
-          </div>
-        </div>
+        <article class="bank-panel bank-goal">
+          <div class="bank-panel-head compact"><div><span class="bank-section-kicker">TARGET</span><h2>Goal Utama</h2></div><Target/></div>
+          <template v-if="activeGoal"><div class="bank-goal-row"><span class="bank-goal-icon"><component :is="getGoalIcon(activeGoal.icon)"/></span><div><b>{{ activeGoal.name }}</b><p>{{ activeGoal.progress_percent }}% tercapai</p></div></div><div class="bank-progress"><i :style="{width:`${Math.min(100,activeGoal.progress_percent || 0)}%`}"></i></div></template>
+          <div v-else class="bank-empty-compact"><p>Belum ada target tabungan.</p><router-link to="/goals">Buat goal <ChevronRight/></router-link></div>
+        </article>
+      </aside>
+    </section>
 
-        <!-- Goals Card Widget — REAL, dari goal store -->
-        <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-5 shadow-soft"
-        >
-          <div v-if="isLoadingGoals" class="text-xs text-ink-400 py-2">
-            Memuat goals...
-          </div>
+    <section class="bank-bottom-grid">
+      <article class="bank-panel bank-transactions">
+        <div class="bank-panel-head"><div><span class="bank-section-kicker">AKTIVITAS</span><h2>Transaksi Terakhir</h2></div><router-link to="/transactions" class="bank-text-link">Lihat semua <ChevronRight/></router-link></div>
+        <div v-if="isLoadingTransactions" class="bank-loading">Memuat transaksi...</div>
+        <div v-else-if="recentTransactions.length===0" class="bank-empty-compact roomy"><p>Belum ada transaksi. Mulai catat aktivitas keuanganmu.</p><router-link to="/transactions/create">Tambah transaksi <ChevronRight/></router-link></div>
+        <div v-else class="bank-tx-list"><div v-for="tx in recentTransactions" :key="tx.id" class="bank-tx-row"><span class="bank-tx-icon" :class="tx.type"><component :is="getCategoryIcon(tx.category?.name)"/></span><div class="bank-tx-main"><b>{{ tx.note || tx.category?.name || 'Transaksi' }}</b><span>{{ tx.category?.name || 'Umum' }} · {{ tx.date }}</span></div><strong :class="tx.type">{{ privateTxMoney(tx) }}</strong></div></div>
+      </article>
 
-          <router-link
-            v-else-if="activeGoal"
-            to="/goals"
-            class="flex items-center justify-between"
-          >
-            <div class="space-y-1">
-              <h3 class="font-display font-bold text-base text-ink-900">
-                Goals
-              </h3>
-              <p class="text-xs text-ink-600 font-medium">
-                {{ activeGoal.name }} ({{ activeGoal.progress_percent }}%)
-              </p>
-            </div>
-            <div
-              class="w-12 h-12 rounded-2xl bg-amber-100/80 text-amber-700 flex items-center justify-center shrink-0"
-            >
-              <component :is="getGoalIcon(activeGoal.icon)" class="w-6 h-6" />
-            </div>
-          </router-link>
-
-          <div v-else class="flex items-center justify-between">
-            <div class="space-y-1">
-              <h3 class="font-display font-bold text-base text-ink-900">
-                Goals
-              </h3>
-              <router-link
-                to="/goals"
-                class="text-xs font-bold text-violet-600 hover:underline"
-              >
-                Buat Goal Pertama →
-              </router-link>
-            </div>
-            <div
-              class="w-12 h-12 rounded-2xl bg-base-50 text-ink-300 flex items-center justify-center shrink-0"
-            >
-              <Target class="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Transaksi Terakhir Section -->
-        <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-4"
-        >
-          <div class="flex items-center justify-between">
-            <h2 class="font-display font-bold text-base text-ink-900">
-              Transaksi Terakhir
-            </h2>
-            <router-link
-              to="/history"
-              class="text-xs font-bold text-violet-600 hover:underline"
-            >
-              Lihat Semua
-            </router-link>
-          </div>
-
-          <div
-            v-if="isLoadingTransactions"
-            class="py-8 text-center text-xs text-ink-400"
-          >
-            Memuat transaksi...
-          </div>
-
-          <div
-            v-else-if="recentTransactions.length === 0"
-            class="py-8 text-center space-y-2"
-          >
-            <p class="text-xs font-semibold text-ink-400">
-              Belum ada transaksi tercatat.
-            </p>
-          </div>
-
-          <div v-else class="space-y-3">
-            <div
-              v-for="tx in recentTransactions"
-              :key="tx.id"
-              class="flex items-center justify-between p-2 rounded-2xl hover:bg-base-50/80 transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                  :class="
-                    tx.type === 'income'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-rose-100 text-rose-500'
-                  "
-                >
-                  <component
-                    :is="getCategoryIcon(tx.category?.name)"
-                    class="w-5 h-5"
-                  />
-                </div>
-                <div>
-                  <h4
-                    class="font-display font-bold text-xs sm:text-sm text-ink-900 line-clamp-1"
-                  >
-                    {{ tx.note || tx.category?.name || "Transaksi" }}
-                  </h4>
-                  <p class="text-[11px] text-ink-400 font-medium">
-                    {{ tx.category?.name || "Umum" }} · {{ tx.date }}
-                  </p>
-                </div>
-              </div>
-
-              <div
-                class="font-mono-money font-bold text-xs sm:text-sm text-right shrink-0"
-                :class="
-                  tx.type === 'income' ? 'text-income-600' : 'text-rose-500'
-                "
-              >
-                {{ tx.type === "income" ? "+Rp " : "-Rp " }}
-                {{ Number(tx.amount).toLocaleString("id-ID") }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <article class="bank-panel bank-insight">
+        <span class="bank-section-kicker">INSIGHT BULAN INI</span>
+        <div class="bank-insight-icon"><Sparkles/></div>
+        <h2 v-if="topSpendingCategory">Pengeluaran terbesar ada di {{ topSpendingCategory.name }}</h2>
+        <h2 v-else>Mulai bangun pola keuanganmu</h2>
+        <p v-if="topSpendingCategory">Kamu sudah mengeluarkan <b>{{ privateMoney(topSpendingCategory.amount) }}</b> pada kategori ini.</p>
+        <p v-else>Tambahkan transaksi agar Ledger dapat menampilkan insight yang lebih berguna.</p>
+        <router-link to="/report">Lihat analisis <ArrowUpRight/></router-link>
+      </article>
+    </section>
   </div>
 </template>
