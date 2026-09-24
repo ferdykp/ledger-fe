@@ -17,6 +17,7 @@ import {
   User as UserIcon,
   Bell,
   Plus,
+  ScanLine,
   Menu,
   X,
 } from "lucide-vue-next";
@@ -31,7 +32,8 @@ const isMoreMenuOpen = ref(false);
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Riwayat", path: "/history", icon: History },
+  { name: "Transaksi", path: "/transactions", icon: History },
+  { name: "Scan Bukti", path: "/scan", icon: ScanLine },
   { name: "Akun", path: "/accounts", icon: Wallet },
   { name: "Budget", path: "/budget", icon: PiggyBank },
   { name: "Goals", path: "/goals", icon: Target },
@@ -42,7 +44,8 @@ const navItems = [
 // Item khusus untuk bottom navigation mobile (4 Utama + Floating Plus)
 const mobileBottomNav = [
   { name: "Beranda", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Riwayat", path: "/history", icon: History },
+  { name: "Transaksi", path: "/transactions", icon: History },
+  { name: "Scan Bukti", path: "/scan", icon: ScanLine },
   { name: "Dompet", path: "/accounts", icon: Wallet },
 ];
 

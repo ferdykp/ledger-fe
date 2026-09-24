@@ -26,7 +26,12 @@ export default defineConfig({
         theme_color: "#6C4CF1",
         background_color: "#FAF9FC",
         display: "standalone",
-        orientation: "portrait",
+        orientation: "any",
+        categories: ["finance", "productivity"],
+        shortcuts: [
+          { name: "Tambah transaksi", short_name: "Tambah", url: "/transactions/create", icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }] },
+          { name: "Scan bukti", short_name: "Scan", url: "/scan", icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }] },
+        ],
         start_url: "/",
         icons: [
           {

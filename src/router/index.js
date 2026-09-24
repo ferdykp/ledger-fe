@@ -17,6 +17,7 @@ import Budget from "../views/Budget.vue";
 import Goal from "../views/Goal.vue";
 import Report from "../views/Report.vue";
 import Settings from "../views/Settings.vue";
+import SmartImport from "../views/SmartImport.vue";
 
 const Placeholder = (title) => ({
   template: `<div class="p-6 bg-paper-0 border border-line-200 rounded-md">
@@ -62,25 +63,19 @@ const routes = [
       },
       {
         path: "/history",
+        redirect: "/transactions",
+        /* legacy alias */
+        /*
         name: "history",
         component: TransactionHistory,
         meta: { requiresAuth: true },
+        */
       },
-      {
-        path: "transactions",
-        name: "transactions",
-        component: Placeholder("Transaksi"),
-      },
-      {
-        path: "budgets",
-        name: "budgets",
-        component: Placeholder("Budgeting"),
-      },
-      {
-        path: "reports",
-        name: "reports",
-        component: Placeholder("Laporan Finansial"),
-      },
+      { path: "transactions", name: "transactions", component: TransactionHistory },
+      { path: "transactions/:id/edit", name: "transactions.edit", component: TransactionCreate },
+      { path: "scan", name: "scan", component: SmartImport },
+      { path: "budgets", redirect: "/budget" },
+      { path: "reports", redirect: "/report" },
 
       {
         path: "/transactions/create",

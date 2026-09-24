@@ -1,7 +1,7 @@
 <!-- ledger-web/src/views/TransactionCreate.vue -->
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
 import { useCategoryStore } from "@/stores/category";
@@ -31,6 +31,8 @@ import {
 import api from "@/lib/axios";
 
 const router = useRouter();
+const route = useRoute();
+const isEditMode = computed(() => Boolean(route.params.id));
 const accountStore = useAccountStore();
 const categoryStore = useCategoryStore();
 const notifyStore = useNotificationStore();
@@ -190,6 +192,25 @@ onMounted(async () => {
   if (categoryStore.categories.length === 0) {
     await categoryStore.fetchCategories();
   }
+  if (!isEditMode.value && route.query.amount) {
+    form.value.amount = Number(route.query.amount) || "";
+    form.value.note = route.query.note || "";
+    if (route.query.date) form.value.date = route.query.date;
+  }
+  if (isEditMode.value) {
+    try {
+      const res = await api.get(`/api/transactions/${route.params.id}`);
+      const tx = res.data.data || res.data;
+      form.value = {
+        type: tx.type, amount: tx.amount, category_id: tx.category_id,
+        account_id: tx.account_id, to_account_id: tx.related_account_id || "",
+        date: tx.date, note: tx.note || "",
+      };
+    } catch (err) {
+      notifyStore.notify({ message: "Transaksi tidak dapat dimuat.", type: "error" });
+      router.replace("/transactions");
+    }
+  }
 });
 
 const formattedAmount = computed({
@@ -331,14 +352,18 @@ async function handleSubmit() {
 
   isLoading.value = true;
   try {
-    await api.post("/api/transactions", form.value);
+    if (isEditMode.value) {
+      await api.put(`/api/transactions/${route.params.id}`, form.value);
+    } else {
+      await api.post("/api/transactions", form.value);
+    }
     window.dispatchEvent(new Event("ledger:data-changed"));
     notifyStore.notify({
-      message: "Transaksi berhasil dicatat!",
+      message: isEditMode.value ? "Perubahan transaksi berhasil disimpan. Saldo sudah disesuaikan otomatis." : "Transaksi berhasil dicatat!",
       type: "success",
     });
     await accountStore.fetchAccounts();
-    router.push("/dashboard");
+    router.push(isEditMode.value ? "/transactions" : "/dashboard");
   } catch (err) {
     notifyStore.notify({
       message: err.response?.data?.message || "Gagal mencatat transaksi.",
@@ -362,7 +387,7 @@ async function handleSubmit() {
         class="px-6 py-5 border-b border-line-200 flex items-center justify-between"
       >
         <h2 class="font-display font-bold text-lg text-ink-900">
-          Tambah Transaksi
+          {{ isEditMode ? "Edit Transaksi" : "Tambah Transaksi" }}
         </h2>
         <button
           @click="router.back()"
@@ -655,7 +680,7 @@ async function handleSubmit() {
             class="w-full h-12 bg-violet-600 text-paper-0 font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
-            <span>{{ isLoading ? "Menyimpan..." : "Catat Transaksi" }}</span>
+            <span>{{ isLoading ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Catat Transaksi") }}</span>
           </button>
         </div>
       </form>

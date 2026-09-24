@@ -71,3 +71,13 @@ html.dark body {
 .btn-bounce:active {
   transform: scale(0.98);
 }
+
+
+/* Cashlog V2: responsive polish & accessibility */
+html { -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; }
+body { min-width: 320px; }
+.pb-safe { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+.font-mono-money { font-variant-numeric: tabular-nums; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid color-mix(in srgb, #6c4cf1 35%, transparent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }

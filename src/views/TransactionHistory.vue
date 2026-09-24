@@ -18,6 +18,8 @@ import {
   X,
   History,
   Trash2,
+  Pencil,
+  Copy,
   AlertTriangle,
   Loader2,
 } from "lucide-vue-next";
@@ -162,6 +164,19 @@ function formatDateLabel(dateStr) {
   if (dateStr === today) return `Hari Ini, ${formattedDate}`;
   if (dateStr === yesterday) return `Kemarin, ${formattedDate}`;
   return formattedDate;
+}
+
+async function duplicateTransaction(tx) {
+  try {
+    await api.post("/api/transactions", {
+      type: tx.type, amount: tx.amount, account_id: tx.account_id,
+      to_account_id: tx.related_account_id || null, category_id: tx.category_id || null,
+      date: new Date().toISOString().slice(0, 10), note: tx.note ? `${tx.note} (salinan)` : "Salinan transaksi",
+    });
+    await fetchTransactions();
+    await accountStore.fetchAccounts();
+    window.dispatchEvent(new Event("ledger:data-changed"));
+  } catch (err) { console.error("Gagal menyalin transaksi", err); }
 }
 
 function openDeleteModal(tx) {
@@ -407,15 +422,17 @@ async function handleDelete() {
                   {{ formatRupiah(tx.amount) }}
                 </div>
 
-                <!-- Tombol Hapus (Pakai @click.stop untuk mencegah bubbling ke induk) -->
-                <button
-                  type="button"
-                  @click.stop="openDeleteModal(tx)"
-                  class="p-1.5 text-gray-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                  title="Hapus Transaksi"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </button>
+                <div class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <router-link :to="`/transactions/${tx.id}/edit`" @click.stop class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50" title="Edit transaksi">
+                    <Pencil class="w-4 h-4" />
+                  </router-link>
+                  <button type="button" @click.stop="duplicateTransaction(tx)" class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50" title="Duplikat transaksi">
+                    <Copy class="w-4 h-4" />
+                  </button>
+                  <button type="button" @click.stop="openDeleteModal(tx)" class="p-1.5 text-ink-400 hover:text-rose-500 rounded-lg hover:bg-rose-50" title="Hapus transaksi">
+                    <Trash2 class="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
