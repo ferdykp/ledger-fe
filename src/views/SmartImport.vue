@@ -83,39 +83,78 @@ function pick(e) {
 //   }
 // }
 async function loadShared() {
-  console.log("Query URL saat ini:", route.query); // <-- Cek apakah shareId ada di sini
-  if (route.query.source !== "share" || !("caches" in window)) return;
+  if (loading.value) {
+    pendingShare = true;
+    return;
+  }
+
+  if (route.query.source !== "share" || !("caches" in window)) {
+    return;
+  }
+
   fromShare.value = true;
+
   try {
     const cache = await caches.open("ledger-share-target-v1");
+
     const id =
       typeof route.query.shareId === "string" ? route.query.shareId : "";
-    console.log("Mencari cache dengan ID:", id); // <-- Cek ID yang dicari
-
-    // Cek semua key yang ada di dalam cache tersebut
-    const keys = await cache.keys();
-    console.log(
-      "Daftar key di cache:",
-      keys.map((k) => k.url),
-    );
 
     const key = id
       ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
       : "/__ledger_shared_file__";
+
+    console.log("Share target:", {
+      source: route.query.source,
+      shareId: id,
+      cacheKey: key,
+    });
+
     const res = await cache.match(key);
 
-    console.log("Hasil match cache:", res); // <-- Apakah null atau berisi Response?
+    if (!res) {
+      error.value =
+        "Bukti dari menu Share belum diterima. Coba bagikan ulang gambar dari aplikasi sumber.";
 
-    if (res) {
-      const blob = await res.blob();
-      console.log("Blob berhasil diambil, ukuran:", blob.size);
-      // ... sisa kode selanjutnya
+      return;
+    }
+
+    const blob = await res.blob();
+
+    console.log("Shared blob:", {
+      size: blob.size,
+      type: blob.type,
+    });
+
+    if (!blob.size) {
+      error.value =
+        "File yang dibagikan kosong. Coba bagikan ulang bukti transaksi.";
+
+      return;
+    }
+
+    const name = decodeURIComponent(
+      res.headers.get("X-Ledger-Name") || "shared-proof.jpg",
+    );
+
+    const sharedFile = new File([blob], name, {
+      type: blob.type || "image/jpeg",
+    });
+
+    const accepted = setFile(sharedFile);
+
+    await cache.delete(key);
+
+    if (accepted) {
+      await scan();
     }
   } catch (e) {
-    console.error("Error saat loadShared:", e);
+    console.error("Gagal membaca file dari Share Target:", e);
+
+    error.value =
+      "Bukti dari menu Share belum dapat dibaca. Coba bagikan ulang atau pilih gambar secara manual.";
   }
 }
-
 async function scan() {
   if (!file.value || loading.value) return;
 
