@@ -20,7 +20,6 @@ import Settings from "../views/Settings.vue";
 import SmartImport from "../views/SmartImport.vue";
 import Bills from "../views/Bills.vue";
 
-
 const routes = [
   {
     path: "/login",
@@ -28,8 +27,18 @@ const routes = [
     component: Login,
     meta: { requiresGuest: true },
   },
-  { path: "/forgot-password", name: "forgot-password", component: ForgotPassword, meta: { requiresGuest: true } },
-  { path: "/reset-password", name: "reset-password", component: ResetPassword, meta: { requiresGuest: true } },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: ForgotPassword,
+    meta: { requiresGuest: true },
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
+    component: ResetPassword,
+    meta: { requiresGuest: true },
+  },
   {
     path: "/register",
     name: "register",
@@ -66,8 +75,16 @@ const routes = [
         meta: { requiresAuth: true },
         */
       },
-      { path: "transactions", name: "transactions", component: TransactionHistory },
-      { path: "transactions/:id/edit", name: "transactions.edit", component: TransactionCreate },
+      {
+        path: "transactions",
+        name: "transactions",
+        component: TransactionHistory,
+      },
+      {
+        path: "transactions/:id/edit",
+        name: "transactions.edit",
+        component: TransactionCreate,
+      },
       { path: "scan", name: "scan", component: SmartImport },
       { path: "bills", name: "bills", component: Bills },
       { path: "budgets", redirect: "/budget" },
@@ -116,7 +133,9 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() { return { top: 0, behavior: "smooth" }; },
+  scrollBehavior() {
+    return { top: 0, behavior: "smooth" };
+  },
 });
 
 router.beforeEach(async (to) => {

@@ -27,8 +27,14 @@ let controller;
 let pendingShare = false;
 function setFile(f) {
   if (loading.value) return false;
-  if (f && (f.size > 10 * 1024 * 1024 || !/\.(jpe?g|png|webp)$/i.test(f.name) && !["image/jpeg", "image/png", "image/webp"].includes(f.type))) {
-    error.value = "Pilih gambar JPG, PNG, atau WEBP dengan ukuran maksimal 10 MB.";
+  if (
+    f &&
+    (f.size > 10 * 1024 * 1024 ||
+      (!/\.(jpe?g|png|webp)$/i.test(f.name) &&
+        !["image/jpeg", "image/png", "image/webp"].includes(f.type)))
+  ) {
+    error.value =
+      "Pilih gambar JPG, PNG, atau WEBP dengan ukuran maksimal 10 MB.";
     return false;
   }
   if (preview.value) URL.revokeObjectURL(preview.value);
@@ -39,38 +45,77 @@ function setFile(f) {
   return true;
 }
 function pick(e) {
-  if (e.target.files?.[0] && setFile(e.target.files[0])) fromShare.value = false;
+  if (e.target.files?.[0] && setFile(e.target.files[0]))
+    fromShare.value = false;
   e.target.value = "";
 }
+// async function loadShared() {
+//   if (loading.value) {
+//     pendingShare = true;
+//     return;
+//   }
+//   if (route.query.source !== "share" || !("caches" in window)) return;
+//   fromShare.value = true;
+//   try {
+//     const cache = await caches.open("ledger-share-target-v1");
+//     const id =
+//       typeof route.query.shareId === "string" ? route.query.shareId : "";
+//     const key = id
+//       ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
+//       : "/__ledger_shared_file__";
+//     const res = await cache.match(key);
+//     if (res) {
+//       const blob = await res.blob();
+//       const name = decodeURIComponent(
+//         res.headers.get("X-Ledger-Name") || "shared-proof.jpg",
+//       );
+//       const accepted = setFile(new File([blob], name, { type: blob.type }));
+//       await cache.delete(key);
+//       await cache.delete("/__ledger_shared_meta__");
+//       if (accepted) await scan();
+//     } else {
+//       error.value =
+//         "Tidak ada gambar dari menu Share. Bagikan file gambar atau pilih dari galeri.";
+//     }
+//   } catch (e) {
+//     error.value =
+//       "Bukti dari menu Share belum dapat dibaca. Pilih file secara manual.";
+//   }
+// }
 async function loadShared() {
-  if (loading.value) {
-    pendingShare = true;
-    return;
-  }
+  console.log("Query URL saat ini:", route.query); // <-- Cek apakah shareId ada di sini
   if (route.query.source !== "share" || !("caches" in window)) return;
   fromShare.value = true;
   try {
     const cache = await caches.open("ledger-share-target-v1");
-    const id = typeof route.query.shareId === "string" ? route.query.shareId : "";
-    const key = id ? `/__ledger_shared_file__/${encodeURIComponent(id)}` : "/__ledger_shared_file__";
+    const id =
+      typeof route.query.shareId === "string" ? route.query.shareId : "";
+    console.log("Mencari cache dengan ID:", id); // <-- Cek ID yang dicari
+
+    // Cek semua key yang ada di dalam cache tersebut
+    const keys = await cache.keys();
+    console.log(
+      "Daftar key di cache:",
+      keys.map((k) => k.url),
+    );
+
+    const key = id
+      ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
+      : "/__ledger_shared_file__";
     const res = await cache.match(key);
+
+    console.log("Hasil match cache:", res); // <-- Apakah null atau berisi Response?
+
     if (res) {
       const blob = await res.blob();
-      const name = decodeURIComponent(
-        res.headers.get("X-Ledger-Name") || "shared-proof.jpg",
-      );
-      const accepted = setFile(new File([blob], name, { type: blob.type }));
-      await cache.delete(key);
-      await cache.delete("/__ledger_shared_meta__");
-      if (accepted) await scan();
-    } else {
-      error.value = "Tidak ada gambar dari menu Share. Bagikan file gambar atau pilih dari galeri.";
+      console.log("Blob berhasil diambil, ukuran:", blob.size);
+      // ... sisa kode selanjutnya
     }
   } catch (e) {
-    error.value =
-      "Bukti dari menu Share belum dapat dibaca. Pilih file secara manual.";
+    console.error("Error saat loadShared:", e);
   }
 }
+
 async function scan() {
   if (!file.value || loading.value) return;
 
@@ -88,7 +133,8 @@ async function scan() {
       timeout: 45000,
       signal: controller.signal,
       onUploadProgress: (event) => {
-        if (event.total && event.loaded >= event.total) status.value = "Membaca teks dan menyiapkan draft…";
+        if (event.total && event.loaded >= event.total)
+          status.value = "Membaca teks dan menyiapkan draft…";
       },
     });
 
@@ -116,7 +162,8 @@ async function scan() {
     }
 
     if ([502, 503, 504].includes(e.response?.status)) {
-      error.value = "Layanan OCR sedang lambat atau tidak tersedia. Coba lagi sebentar lagi.";
+      error.value =
+        "Layanan OCR sedang lambat atau tidak tersedia. Coba lagi sebentar lagi.";
       return;
     }
     if (e.response?.status === 413) {
@@ -125,7 +172,10 @@ async function scan() {
     }
 
     if (e.response?.status === 422) {
-      error.value = e.response?.data?.errors?.document?.[0] || e.response?.data?.message || "Bukti belum berhasil dibaca.";
+      error.value =
+        e.response?.data?.errors?.document?.[0] ||
+        e.response?.data?.message ||
+        "Bukti belum berhasil dibaca.";
       return;
     }
 
@@ -160,7 +210,9 @@ function useDraft() {
 function reset() {
   if (setFile(null)) fromShare.value = false;
 }
-watch(() => [route.query.source, route.query.shareId], loadShared, { immediate: true });
+watch(() => [route.query.source, route.query.shareId], loadShared, {
+  immediate: true,
+});
 onUnmounted(() => {
   pendingShare = false;
   controller?.abort();
@@ -202,7 +254,13 @@ onUnmounted(() => {
               <p>Screenshot transfer, QRIS, struk, atau invoice.</p>
             </div>
           </div>
-          <button v-if="file" @click="reset" :disabled="loading" aria-label="Hapus gambar" class="icon-button">
+          <button
+            v-if="file"
+            @click="reset"
+            :disabled="loading"
+            aria-label="Hapus gambar"
+            class="icon-button"
+          >
             <X class="w-4 h-4" />
           </button>
         </div>
@@ -235,11 +293,24 @@ onUnmounted(() => {
         <div class="grid grid-cols-2 gap-3 mt-4">
           <label class="secondary-button" :class="{ 'opacity-50': loading }">
             <Upload class="w-4 h-4" /> Upload gambar
-            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" :disabled="loading" @change="pick" />
+            <input
+              class="sr-only"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              :disabled="loading"
+              @change="pick"
+            />
           </label>
           <label class="secondary-button" :class="{ 'opacity-50': loading }">
             <Camera class="w-4 h-4" /> Ambil foto
-            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" :disabled="loading" @change="pick" />
+            <input
+              class="sr-only"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              :disabled="loading"
+              @change="pick"
+            />
           </label>
         </div>
         <button
@@ -268,9 +339,12 @@ onUnmounted(() => {
           ><span>Hasil pembacaan akan tampil di sini.</span>
         </div>
         <div v-if="loading" class="empty-state">
-          <Loader2 class="w-8 h-8 animate-spin text-primary-600" /><b
-            >{{ status }}</b
-          ><span>Tetap di halaman ini hingga draft atau pesan hasil muncul.</span>
+          <Loader2 class="w-8 h-8 animate-spin text-primary-600" /><b>{{
+            status
+          }}</b
+          ><span
+            >Tetap di halaman ini hingga draft atau pesan hasil muncul.</span
+          >
         </div>
         <div v-if="error" role="alert" class="notice notice-warning">
           <AlertTriangle class="w-5 h-5" /><span>{{ error }}</span>
@@ -287,7 +361,9 @@ onUnmounted(() => {
               ><strong
                 >Rp
                 {{
-                  result.draft?.amount == null ? "—" : Number(result.draft.amount).toLocaleString("id-ID")
+                  result.draft?.amount == null
+                    ? "—"
+                    : Number(result.draft.amount).toLocaleString("id-ID")
                 }}</strong
               >
             </div>
