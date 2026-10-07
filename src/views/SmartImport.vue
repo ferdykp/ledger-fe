@@ -27,14 +27,9 @@ let controller;
 let pendingShare = false;
 function setFile(f) {
   if (loading.value) return false;
-  if (
-    f &&
-    (f.size > 10 * 1024 * 1024 ||
-      (!/\.(jpe?g|png|webp)$/i.test(f.name) &&
-        !["image/jpeg", "image/png", "image/webp"].includes(f.type)))
-  ) {
-    error.value =
-      "Pilih gambar JPG, PNG, atau WEBP dengan ukuran maksimal 10 MB.";
+  if (f && f.size > 10 * 1024 * 1024) {
+    error.value = "Ukuran bukti maksimal 10 MB.";
+
     return false;
   }
   if (preview.value) URL.revokeObjectURL(preview.value);
@@ -62,17 +57,60 @@ async function loadShared() {
   fromShare.value = true;
 
   try {
-    const cache = await caches.open("ledger-share-target-v1");
-
+    const cache = await caches.open("ledger-share-target-v2");
     const id =
       typeof route.query.shareId === "string" ? route.query.shareId : "";
+    const shareStatus =
+      typeof route.query.shareStatus === "string"
+        ? route.query.shareStatus
+        : "";
 
     const key = id
       ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
       : "/__ledger_shared_file__";
 
-
     const res = await cache.match(key);
+    if (!res) {
+      const metaKey = id
+        ? `/__ledger_shared_meta__/${encodeURIComponent(id)}`
+        : "";
+
+      let diagnostic = null;
+
+      if (metaKey) {
+        const metaResponse = await cache.match(metaKey);
+
+        if (metaResponse) {
+          try {
+            diagnostic = await metaResponse.json();
+          } catch {
+            diagnostic = null;
+          }
+        }
+      }
+
+      console.warn("Ledger Share Target diagnostic:", {
+        shareStatus,
+        diagnostic,
+      });
+
+      if (shareStatus === "too-large") {
+        error.value = "Bukti yang dibagikan lebih besar dari 10 MB.";
+
+        return;
+      }
+
+      if (shareStatus === "error") {
+        error.value =
+          "Ledger menerima permintaan Share, tetapi Android gagal memberikan file.";
+        return;
+      }
+
+      error.value =
+        "Ledger dibuka dari menu Share, tetapi aplikasi sumber tidak mengirim gambar sebagai file.";
+
+      return;
+    }
 
     if (!res) {
       error.value =
@@ -82,7 +120,6 @@ async function loadShared() {
     }
 
     const blob = await res.blob();
-
 
     if (!blob.size) {
       error.value =
