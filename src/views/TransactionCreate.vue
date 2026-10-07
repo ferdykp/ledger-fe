@@ -58,7 +58,9 @@ const isCreatingAccount = ref(false);
 
 // Form State Transaksi
 const form = ref({
-  type: "expense",
+  type: ["income", "expense", "transfer"].includes(route.query.type)
+    ? route.query.type
+    : "expense",
   amount: "",
   category_id: null,
   account_id: "",
@@ -193,7 +195,7 @@ onMounted(async () => {
   if (categoryStore.categories.length === 0) {
     await categoryStore.fetchCategories();
   }
-  if (!isEditMode.value && route.query.amount) {
+  if (!isEditMode.value) {
     form.value.amount = Number(route.query.amount) || "";
     form.value.note = route.query.note || "";
     if (route.query.date) form.value.date = route.query.date;
@@ -203,12 +205,19 @@ onMounted(async () => {
       const res = await api.get(`/api/transactions/${route.params.id}`);
       const tx = res.data.data || res.data;
       form.value = {
-        type: tx.type, amount: tx.amount, category_id: tx.category_id,
-        account_id: tx.account_id, to_account_id: tx.related_account_id || "",
-        date: tx.date, note: tx.note || "",
+        type: tx.type,
+        amount: tx.amount,
+        category_id: tx.category_id,
+        account_id: tx.account_id,
+        to_account_id: tx.related_account_id || "",
+        date: tx.date,
+        note: tx.note || "",
       };
     } catch (err) {
-      notifyStore.notify({ message: "Transaksi tidak dapat dimuat.", type: "error" });
+      notifyStore.notify({
+        message: "Transaksi tidak dapat dimuat.",
+        type: "error",
+      });
       router.replace("/transactions");
     }
   }
@@ -352,14 +361,22 @@ async function handleSubmit() {
     return;
   }
 
-  if (form.value.type === "transfer" && String(form.value.account_id) === String(form.value.to_account_id)) {
-    notifyStore.notify({ message: "Akun tujuan harus berbeda dari akun asal.", type: "error" });
+  if (
+    form.value.type === "transfer" &&
+    String(form.value.account_id) === String(form.value.to_account_id)
+  ) {
+    notifyStore.notify({
+      message: "Akun tujuan harus berbeda dari akun asal.",
+      type: "error",
+    });
     return;
   }
   const payload = { ...form.value };
   if (payload.type === "transfer") payload.category_id = null;
   else payload.to_account_id = null;
-  const category = categories.value.find(item => item.id === payload.category_id);
+  const category = categories.value.find(
+    (item) => item.id === payload.category_id,
+  );
   if (category && category.type !== payload.type) payload.category_id = null;
   isLoading.value = true;
   try {
@@ -370,7 +387,9 @@ async function handleSubmit() {
     }
     window.dispatchEvent(new Event("ledger:data-changed"));
     notifyStore.notify({
-      message: isEditMode.value ? "Perubahan transaksi berhasil disimpan. Saldo sudah disesuaikan otomatis." : "Transaksi berhasil dicatat!",
+      message: isEditMode.value
+        ? "Perubahan transaksi berhasil disimpan. Saldo sudah disesuaikan otomatis."
+        : "Transaksi berhasil dicatat!",
       type: "success",
     });
     await accountStore.fetchAccounts();
@@ -691,7 +710,13 @@ async function handleSubmit() {
             class="w-full h-12 bg-violet-600 text-paper-0 font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
-            <span>{{ isLoading ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Catat Transaksi") }}</span>
+            <span>{{
+              isLoading
+                ? "Menyimpan..."
+                : isEditMode
+                  ? "Simpan Perubahan"
+                  : "Catat Transaksi"
+            }}</span>
           </button>
         </div>
       </form>

@@ -7,7 +7,6 @@ const authStore = useAuthStore();
 onMounted(() => {
   const savedTheme = localStorage.getItem("theme") || "light";
   document.documentElement.classList.toggle("dark", savedTheme === "dark");
-
 });
 </script>
 <template>

@@ -36,7 +36,8 @@ const { accounts } = storeToRefs(accountStore);
 const { categories } = storeToRefs(categoryStore);
 
 const transactions = ref([]);
-const page = ref(1), lastPage = ref(1);
+const page = ref(1),
+  lastPage = ref(1);
 let requestVersion = 0;
 const notify = useNotificationStore();
 const isLoading = ref(false);
@@ -82,8 +83,10 @@ async function fetchTransactions(append = false) {
   try {
     const params = { page: requestedPage, per_page: 50 };
     if (searchQuery.value.trim()) params.search = searchQuery.value.trim();
-    if (selectedCategory.value !== "all") params.category_id = selectedCategory.value;
-    if (selectedAccount.value !== "all") params.account_id = selectedAccount.value;
+    if (selectedCategory.value !== "all")
+      params.category_id = selectedCategory.value;
+    if (selectedAccount.value !== "all")
+      params.account_id = selectedAccount.value;
     if (selectedType.value !== "all") params.type = selectedType.value;
     if (selectedTime.value === "this_month") params.month = localMonth();
     if (selectedTime.value === "last_month") {
@@ -92,24 +95,32 @@ async function fetchTransactions(append = false) {
     const res = await api.get("/api/transactions", { params });
     if (version !== requestVersion) return;
     const data = res.data.data || [];
-    transactions.value = append === true ? [...transactions.value, ...data] : data;
+    transactions.value =
+      append === true ? [...transactions.value, ...data] : data;
     page.value = res.data.meta.current_page;
     lastPage.value = res.data.meta.last_page;
   } catch (err) {
     console.warn("Gagal memuat riwayat transaksi:", err.message);
-
-  } finally { if (version === requestVersion) isLoading.value = false; }
+  } finally {
+    if (version === requestVersion) isLoading.value = false;
+  }
 }
 
 let filterTimer;
-watch([searchQuery, selectedTime, selectedCategory, selectedAccount, selectedType], () => {
-  clearTimeout(filterTimer);
-  filterTimer = setTimeout(fetchTransactions, 250);
-});
+watch(
+  [searchQuery, selectedTime, selectedCategory, selectedAccount, selectedType],
+  () => {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(fetchTransactions, 250);
+  },
+);
 
 // Filtering Logic
 const filteredTransactions = computed(() => transactions.value);
-onUnmounted(() => { clearTimeout(filterTimer); requestVersion++; });
+onUnmounted(() => {
+  clearTimeout(filterTimer);
+  requestVersion++;
+});
 
 // Group Transactions by Date
 const groupedTransactions = computed(() => {
@@ -162,14 +173,27 @@ async function duplicateTransaction(tx) {
   isDeleting.value = true;
   try {
     await api.post("/api/transactions", {
-      type: tx.type, amount: tx.amount, account_id: tx.account_id,
-      to_account_id: tx.related_account_id || null, category_id: tx.category_id || null,
-      date: localDate(), note: tx.note ? `${tx.note.slice(0, 490)} (salinan)` : "Salinan transaksi",
+      type: tx.type,
+      amount: tx.amount,
+      account_id: tx.account_id,
+      to_account_id: tx.related_account_id || null,
+      category_id: tx.category_id || null,
+      date: localDate(),
+      note: tx.note
+        ? `${tx.note.slice(0, 490)} (salinan)`
+        : "Salinan transaksi",
     });
     await fetchTransactions();
     await accountStore.fetchAccounts();
     window.dispatchEvent(new Event("ledger:data-changed"));
-  } catch (err) { notify.notify({ message: err.response?.data?.message || "Gagal menyalin transaksi.", type: "error" }); } finally { isDeleting.value = false; }
+  } catch (err) {
+    notify.notify({
+      message: err.response?.data?.message || "Gagal menyalin transaksi.",
+      type: "error",
+    });
+  } finally {
+    isDeleting.value = false;
+  }
 }
 
 function openDeleteModal(tx) {
@@ -202,7 +226,10 @@ async function handleDelete() {
     isDeleteModalOpen.value = false;
     transactionToDelete.value = null;
   } catch (err) {
-    notify.notify({ message: err.response?.data?.message || "Gagal menghapus transaksi.", type: "error" });
+    notify.notify({
+      message: err.response?.data?.message || "Gagal menghapus transaksi.",
+      type: "error",
+    });
   } finally {
     isDeleting.value = false;
   }
@@ -415,14 +442,31 @@ async function handleDelete() {
                   {{ formatRupiah(tx.amount) }}
                 </div>
 
-                <div class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                  <router-link :to="`/transactions/${tx.id}/edit`" @click.stop class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50" title="Edit transaksi">
+                <div
+                  class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                >
+                  <router-link
+                    :to="`/transactions/${tx.id}/edit`"
+                    @click.stop
+                    class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50"
+                    title="Edit transaksi"
+                  >
                     <Pencil class="w-4 h-4" />
                   </router-link>
-                  <button type="button" @click.stop="duplicateTransaction(tx)" class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50" title="Duplikat transaksi">
+                  <button
+                    type="button"
+                    @click.stop="duplicateTransaction(tx)"
+                    class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50"
+                    title="Duplikat transaksi"
+                  >
                     <Copy class="w-4 h-4" />
                   </button>
-                  <button type="button" @click.stop="openDeleteModal(tx)" class="p-1.5 text-ink-400 hover:text-rose-500 rounded-lg hover:bg-rose-50" title="Hapus transaksi">
+                  <button
+                    type="button"
+                    @click.stop="openDeleteModal(tx)"
+                    class="p-1.5 text-ink-400 hover:text-rose-500 rounded-lg hover:bg-rose-50"
+                    title="Hapus transaksi"
+                  >
                     <Trash2 class="w-4 h-4" />
                   </button>
                 </div>
@@ -483,7 +527,14 @@ async function handleDelete() {
         </div>
       </div>
     </div>
-    <button v-if="page < lastPage" :disabled="isLoading" @click="fetchTransactions(true)" class="primary-button mx-auto">{{ isLoading ? 'Memuat…' : 'Muat transaksi berikutnya' }}</button>
+    <button
+      v-if="page < lastPage"
+      :disabled="isLoading"
+      @click="fetchTransactions(true)"
+      class="primary-button mx-auto"
+    >
+      {{ isLoading ? "Memuat…" : "Muat transaksi berikutnya" }}
+    </button>
   </div>
 </template>
 

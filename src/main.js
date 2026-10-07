@@ -20,7 +20,10 @@ pinia.use(({ store }) => {
   const reset = () => store.$patch(structuredClone(initial));
   window.addEventListener("ledger:session-cleared", reset);
   const dispose = store.$dispose.bind(store);
-  store.$dispose = () => { window.removeEventListener("ledger:session-cleared", reset); dispose(); };
+  store.$dispose = () => {
+    window.removeEventListener("ledger:session-cleared", reset);
+    dispose();
+  };
 });
 app.use(pinia);
 app.use(router);
@@ -29,7 +32,8 @@ window.addEventListener("ledger:unauthorized", () => {
   const auth = useAuthStore(pinia);
   auth.logoutLocal();
   const current = router.currentRoute.value;
-  if (current.meta.requiresAuth) router.replace({ path: "/login", query: { redirect: current.fullPath } });
+  if (current.meta.requiresAuth)
+    router.replace({ path: "/login", query: { redirect: current.fullPath } });
 });
 window.addEventListener("ledger:request-error", (event) => {
   useNotificationStore(pinia).notify({ message: event.detail, type: "error" });

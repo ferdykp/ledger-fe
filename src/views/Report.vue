@@ -30,7 +30,14 @@ function getPrevMonthStr(monthStr) {
 
 const selectedMonth = ref(getCurrentMonthStr());
 const isLoading = ref(false);
-const report = ref({ income: 0, expense: 0, net: 0, previous: { income: 0, expense: 0, net: 0 }, categories: [], weekly: [] });
+const report = ref({
+  income: 0,
+  expense: 0,
+  net: 0,
+  previous: { income: 0, expense: 0, net: 0 },
+  categories: [],
+  weekly: [],
+});
 
 let requestVersion = 0;
 async function fetchReportData() {
@@ -38,12 +45,15 @@ async function fetchReportData() {
   const version = ++requestVersion;
   isLoading.value = true;
   try {
-    const res = await api.get("/api/reports/monthly", { params: { month: selectedMonth.value } });
+    const res = await api.get("/api/reports/monthly", {
+      params: { month: selectedMonth.value },
+    });
     if (version === requestVersion) report.value = res.data.data;
   } catch (err) {
     console.warn("Gagal memuat data laporan:", err.message);
-
-  } finally { if (version === requestVersion) isLoading.value = false; }
+  } finally {
+    if (version === requestVersion) isLoading.value = false;
+  }
 }
 
 let liveTimer;
@@ -101,23 +111,44 @@ const savingsChangeLabel = computed(() =>
 );
 
 // Breakdown Pengeluaran per Kategori (diurutkan dari terbesar)
-const categoryBreakdown = computed(() => (report.value.categories || []).map((x) => ({ name: x.name, amount: Number(x.amount || 0) })));
+const categoryBreakdown = computed(() =>
+  (report.value.categories || []).map((x) => ({
+    name: x.name,
+    amount: Number(x.amount || 0),
+  })),
+);
 
 const weeklySeries = computed(() => [
-  { name: "Pemasukan", data: (report.value.weekly || []).map(x => Number(x.income || 0)) },
-  { name: "Pengeluaran", data: (report.value.weekly || []).map(x => Number(x.expense || 0)) },
+  {
+    name: "Pemasukan",
+    data: (report.value.weekly || []).map((x) => Number(x.income || 0)),
+  },
+  {
+    name: "Pengeluaran",
+    data: (report.value.weekly || []).map((x) => Number(x.expense || 0)),
+  },
 ]);
 const weeklyChartOptions = computed(() => ({
-  chart: { type: "area", toolbar: { show: false }, animations: { enabled: true } },
-  dataLabels: { enabled: false }, stroke: { curve: "smooth", width: 3 },
-  xaxis: { categories: (report.value.weekly || []).map(x => x.label) },
+  chart: {
+    type: "area",
+    toolbar: { show: false },
+    animations: { enabled: true },
+  },
+  dataLabels: { enabled: false },
+  stroke: { curve: "smooth", width: 3 },
+  xaxis: { categories: (report.value.weekly || []).map((x) => x.label) },
   yaxis: { labels: { formatter: (v) => formatRupiah(v) } },
-  tooltip: { y: { formatter: (v) => formatRupiah(v) } }, legend: { show: false },
+  tooltip: { y: { formatter: (v) => formatRupiah(v) } },
+  legend: { show: false },
 }));
-const categorySeries = computed(() => categoryBreakdown.value.map(x => x.amount));
+const categorySeries = computed(() =>
+  categoryBreakdown.value.map((x) => x.amount),
+);
 const categoryChartOptions = computed(() => ({
-  chart: { type: "donut" }, labels: categoryBreakdown.value.map(x => x.name),
-  legend: { position: "bottom" }, dataLabels: { enabled: false },
+  chart: { type: "donut" },
+  labels: categoryBreakdown.value.map((x) => x.name),
+  legend: { position: "bottom" },
+  dataLabels: { enabled: false },
   tooltip: { y: { formatter: (v) => formatRupiah(v) } },
   plotOptions: { pie: { donut: { size: "70%" } } },
 }));
@@ -341,8 +372,19 @@ const insightIcon = computed(() => {
         </div>
       </div>
 
-      <div v-if="isLoading" class="h-64 flex items-center justify-center text-sm text-ink-400">Memuat grafik...</div>
-      <VueApexCharts v-else type="area" height="280" :options="weeklyChartOptions" :series="weeklySeries" />
+      <div
+        v-if="isLoading"
+        class="h-64 flex items-center justify-center text-sm text-ink-400"
+      >
+        Memuat grafik...
+      </div>
+      <VueApexCharts
+        v-else
+        type="area"
+        height="280"
+        :options="weeklyChartOptions"
+        :series="weeklySeries"
+      />
     </div>
 
     <!-- BOTTOM SECTION: BREAKDOWN KATEGORI & INSIGHT LEDGER -->
@@ -356,10 +398,19 @@ const insightIcon = computed(() => {
         </h2>
 
         <div v-if="categoryBreakdown.length" class="py-2">
-          <VueApexCharts type="donut" height="310" :options="categoryChartOptions" :series="categorySeries" />
-          <div class="text-center -mt-2 text-xs text-ink-500">Total pengeluaran: <strong>{{ formatRupiah(totalExpense) }}</strong></div>
+          <VueApexCharts
+            type="donut"
+            height="310"
+            :options="categoryChartOptions"
+            :series="categorySeries"
+          />
+          <div class="text-center -mt-2 text-xs text-ink-500">
+            Total pengeluaran: <strong>{{ formatRupiah(totalExpense) }}</strong>
+          </div>
         </div>
-        <div v-else class="py-16 text-center text-sm text-ink-400">Belum ada pengeluaran bulan ini</div>
+        <div v-else class="py-16 text-center text-sm text-ink-400">
+          Belum ada pengeluaran bulan ini
+        </div>
       </div>
 
       <!-- Insight Ledger (Card Kanan Gradient Purple) — SEKARANG DINAMIS -->

@@ -15,7 +15,6 @@ export const useAuthStore = defineStore("auth", () => {
   async function fetchUser() {
     // Gunakan token.value untuk membaca nilai ref
     if (!token.value) {
-
       user.value = null;
       return false;
     }
@@ -38,7 +37,6 @@ export const useAuthStore = defineStore("auth", () => {
     token.value = authToken;
     localStorage.setItem("token", authToken);
 
-
     user.value = response.data.data.user;
 
     notifyStore.notify({
@@ -51,7 +49,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function register(payload) {
     const response = await api.post("/api/register", payload);
-
 
     notifyStore.notify({
       message: "Registrasi berhasil! Silahkan Login.",
@@ -84,7 +81,6 @@ export const useAuthStore = defineStore("auth", () => {
     localStorage.removeItem("token");
     token.value = "";
     user.value = null;
-
   }
   // ledger-web/src/stores/auth.js
 

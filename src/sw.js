@@ -47,7 +47,7 @@ self.addEventListener("fetch", (event) => {
 async function handleShare(request) {
   const shareId = createShareId();
 
-  const cache = await caches.open(SHARE_CACHE);
+  let cache;
 
   let shareStatus = "no-file";
 
@@ -69,45 +69,14 @@ async function handleShare(request) {
 
     contentLength: request.headers.get("content-length") || "",
 
-    rawByteLength: 0,
-
     keys: [],
     values: [],
   };
 
   try {
-    /*
-    |--------------------------------------------------------------------------
-    | Clone request
-    |--------------------------------------------------------------------------
-    |
-    | Body Request adalah stream dan hanya dapat dibaca satu kali.
-    |
-    | Clone pertama:
-    | → mengetahui apakah Android benar-benar mengirim body.
-    |
-    | Clone kedua:
-    | → parsing multipart/form-data.
-    |
-    */
-
-    const rawRequest = request.clone();
-    const formRequest = request.clone();
-
-    /*
-    |--------------------------------------------------------------------------
-    | Inspect raw request size
-    |--------------------------------------------------------------------------
-    */
-
-    try {
-      const rawBuffer = await rawRequest.arrayBuffer();
-
-      debug.rawByteLength = rawBuffer.byteLength;
-    } catch (error) {
-      debug.rawReadError = error?.message || String(error);
-    }
-
+    cache = await caches.open(SHARE_CACHE);
+    // Parse once: cloning and buffering the whole multipart request doubles memory
+    // use before the file size limit can be checked on low-memory Android devices.
     /*
     |--------------------------------------------------------------------------
     | Parse multipart/form-data
@@ -117,7 +86,7 @@ async function handleShare(request) {
     let formData;
 
     try {
-      formData = await formRequest.formData();
+      formData = await request.formData();
     } catch (error) {
       debug.formDataError = error?.message || String(error);
 
@@ -159,7 +128,7 @@ async function handleShare(request) {
            * Jangan simpan isi lengkap.
            * Cukup sedikit preview untuk debugging.
            */
-          preview: value.slice(0, 100),
+          // Only metadata: share text can contain private payment details.
         });
 
         continue;
@@ -305,7 +274,9 @@ async function handleShare(request) {
     |--------------------------------------------------------------------------
     */
 
-    const fileRequest = new Request(`/__ledger_shared_file__/${shareId}`);
+    const fileRequest = new Request(
+      new URL(`/__ledger_shared_file__/${shareId}`, self.location.origin),
+    );
 
     const fileResponse = new Response(buffer, {
       headers: {
@@ -398,14 +369,20 @@ function isUsableFile(value) {
 */
 
 async function saveMeta(cache, shareId, data) {
+  if (!cache) return;
   try {
-    const request = new Request(`/__ledger_shared_meta__/${shareId}`);
+    const request = new Request(
+      new URL(`/__ledger_shared_meta__/${shareId}`, self.location.origin),
+    );
 
-    const response = new Response(JSON.stringify(data), {
-      headers: {
-        "Content-Type": "application/json",
+    const response = new Response(
+      JSON.stringify({ ...data, createdAt: Date.now() }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
 
     await cache.put(request, response);
   } catch (error) {

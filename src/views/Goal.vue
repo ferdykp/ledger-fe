@@ -177,6 +177,7 @@ async function handleSaveGoal() {
 }
 
 async function handleDeposit() {
+  if (isSubmitting.value) return;
   if (!depositForm.value.amount || !selectedGoal.value) return;
 
   isSubmitting.value = true;

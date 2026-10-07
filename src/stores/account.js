@@ -30,7 +30,6 @@ export const useAccountStore = defineStore("account", () => {
       }
     } catch (error) {
       console.warn("Gagal memuat akun:", error.message);
-
     } finally {
       isLoading.value = false;
     }

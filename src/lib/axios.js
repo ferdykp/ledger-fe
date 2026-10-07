@@ -30,11 +30,24 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    const activeSession = error.config?.ledgerToken === localStorage.getItem("token");
-    if (error.response?.status === 401 && activeSession && error.config?.ledgerToken) {
+    const activeSession =
+      error.config?.ledgerToken === localStorage.getItem("token");
+    if (
+      error.response?.status === 401 &&
+      activeSession &&
+      error.config?.ledgerToken
+    ) {
       window.dispatchEvent(new Event("ledger:unauthorized"));
-    } else if (error.config?.method === "get" && activeSession && !axios.isCancel(error)) {
-      window.dispatchEvent(new CustomEvent("ledger:request-error", { detail: "Data belum dapat dimuat. Periksa koneksi lalu coba lagi." }));
+    } else if (
+      error.config?.method === "get" &&
+      activeSession &&
+      !axios.isCancel(error)
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("ledger:request-error", {
+          detail: "Data belum dapat dimuat. Periksa koneksi lalu coba lagi.",
+        }),
+      );
     }
     return Promise.reject(error);
   },

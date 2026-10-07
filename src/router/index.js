@@ -19,6 +19,7 @@ const Report = () => import("../views/Report.vue");
 const Settings = () => import("../views/Settings.vue");
 const SmartImport = () => import("../views/SmartImport.vue");
 const Bills = () => import("../views/Bills.vue");
+const WhatsAppIntegration = () => import("../views/WhatsAppIntegration.vue");
 
 const routes = [
   {
@@ -81,6 +82,7 @@ const routes = [
       },
       { path: "scan", name: "scan", component: SmartImport },
       { path: "bills", name: "bills", component: Bills },
+      { path: "settings/whatsapp", name: "settings.whatsapp", component: WhatsAppIntegration },
       { path: "budgets", redirect: "/budget" },
       { path: "reports", redirect: "/report" },
 

@@ -39,7 +39,6 @@ export const useGoalStore = defineStore("goal", () => {
       goals.value = Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn("Gagal memuat target tabungan:", error.message);
-
     } finally {
       isLoading.value = false;
     }

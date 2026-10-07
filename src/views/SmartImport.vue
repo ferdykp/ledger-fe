@@ -42,6 +42,21 @@ const shareStatus = ref("");
 
 let controller = null;
 let pendingShare = false;
+let readingShare = false;
+let disposed = false;
+let sharedCacheEntry = null;
+
+async function consumeSharedFile() {
+  if (!sharedCacheEntry) return;
+  const { cache, fileKey, metaKey } = sharedCacheEntry;
+  sharedCacheEntry = null;
+  try {
+    await cache.delete(fileKey);
+    if (metaKey) await cache.delete(metaKey);
+  } catch {
+    // Cleanup must not discard a successfully parsed draft.
+  }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -105,6 +120,7 @@ function pick(e) {
   const selected = e.target.files?.[0];
 
   if (selected && setFile(selected)) {
+    void consumeSharedFile();
     fromShare.value = false;
     shareDebug.value = null;
     shareStatus.value = "";
@@ -143,7 +159,8 @@ async function loadShared() {
    * Jika OCR sedang berjalan dan ada share baru,
    * tunggu sampai OCR selesai.
    */
-  if (loading.value) {
+  if (disposed) return;
+  if (loading.value || readingShare) {
     pendingShare = true;
     return;
   }
@@ -165,6 +182,8 @@ async function loadShared() {
     return;
   }
 
+  readingShare = true;
+  const requestedId = route.query.shareId;
   try {
     /*
      * Harus sama dengan CACHE NAME di src/sw.js
@@ -188,6 +207,7 @@ async function loadShared() {
      */
     const diagnostic = await readShareMeta(cache, id);
 
+    if (disposed || requestedId !== route.query.shareId) return;
     shareDebug.value = diagnostic;
 
     console.log("Ledger Share Target:", {
@@ -203,6 +223,17 @@ async function loadShared() {
      * ================================================================
      */
     if (!response) {
+      setFile(null);
+      const messages = {
+        "parse-error":
+          "Format file dari aplikasi sumber tidak dapat dibaca. Simpan gambar lalu unggah manual.",
+        "empty-file":
+          "Aplikasi sumber mengirim file kosong. Coba bagikan ulang gambar.",
+      };
+      if (messages[shareStatus.value]) {
+        error.value = messages[shareStatus.value];
+        return;
+      }
       if (shareStatus.value === "too-large") {
         error.value = "Bukti yang dibagikan lebih besar dari 10 MB.";
         return;
@@ -300,6 +331,7 @@ async function loadShared() {
       size: sharedFile.size,
     });
 
+    if (disposed || requestedId !== route.query.shareId) return;
     const accepted = setFile(sharedFile);
 
     if (!accepted) {
@@ -310,11 +342,11 @@ async function loadShared() {
      * File berhasil dipindahkan dari Cache Storage
      * ke state Vue.
      */
-    await cache.delete(fileKey);
-
-    if (id) {
-      await cache.delete(`/__ledger_shared_meta__/${encodeURIComponent(id)}`);
-    }
+    sharedCacheEntry = {
+      cache,
+      fileKey,
+      metaKey: id ? `/__ledger_shared_meta__/${encodeURIComponent(id)}` : null,
+    };
 
     /*
      * Otomatis jalankan OCR.
@@ -325,6 +357,12 @@ async function loadShared() {
 
     error.value =
       "Bukti dari menu Share belum dapat dibaca. Coba bagikan ulang atau pilih gambar secara manual.";
+  } finally {
+    readingShare = false;
+    if (pendingShare && !disposed) {
+      pendingShare = false;
+      void loadShared();
+    }
   }
 }
 
@@ -371,6 +409,7 @@ async function scan() {
 
     result.value = r.data.data;
     status.value = "";
+    await consumeSharedFile();
   } catch (e) {
     if (e.code === "ERR_CANCELED" || e.name === "CanceledError") {
       return;
@@ -424,7 +463,7 @@ async function scan() {
     loading.value = false;
     controller = null;
 
-    if (pendingShare) {
+    if (pendingShare && !readingShare && !disposed) {
       pendingShare = false;
       void loadShared();
     }
@@ -459,7 +498,8 @@ function useDraft() {
 */
 
 function reset() {
-  if (loading.value) return;
+  if (loading.value || readingShare) return;
+  void consumeSharedFile();
 
   revokePreview();
 
@@ -495,6 +535,7 @@ watch(
 */
 
 onUnmounted(() => {
+  disposed = true;
   pendingShare = false;
 
   controller?.abort();
@@ -737,8 +778,7 @@ onUnmounted(() => {
 
           <pre
             class="max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-white/70 p-3 text-[10px] leading-relaxed text-red-700"
-            >{{ JSON.stringify(shareDebug, null, 2) }}</pre
-          >
+            >{{ JSON.stringify(shareDebug, null, 2) }}</pre>
         </div>
 
         <!-- ========================================================= -->

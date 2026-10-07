@@ -44,7 +44,6 @@ export const useBudgetStore = defineStore("budget", () => {
       budgets.value = Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn("Gagal memuat budget:", error.message);
-
     } finally {
       isLoading.value = false;
     }
@@ -55,9 +54,7 @@ export const useBudgetStore = defineStore("budget", () => {
     const response = await api.post("/api/budgets", payload);
     const newBudget = response.data.data || response.data;
 
-    const index = budgets.value.findIndex(
-      (b) => b.id === newBudget.id,
-    );
+    const index = budgets.value.findIndex((b) => b.id === newBudget.id);
     if (index !== -1) {
       budgets.value[index] = newBudget;
     } else {

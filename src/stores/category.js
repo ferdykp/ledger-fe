@@ -28,7 +28,6 @@ export const useCategoryStore = defineStore("category", () => {
       categories.value = Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn("Gagal memuat kategori:", error.message);
-
     } finally {
       isLoading.value = false;
     }

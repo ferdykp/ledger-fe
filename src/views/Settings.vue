@@ -76,21 +76,47 @@ const isLoggingOut = ref(false);
 const isChangingPassword = ref(false);
 const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
-const passwordForm = ref({ current_password: "", password: "", password_confirmation: "" });
+const passwordForm = ref({
+  current_password: "",
+  password: "",
+  password_confirmation: "",
+});
 
 async function handleChangePassword() {
-  if (passwordForm.value.password !== passwordForm.value.password_confirmation) {
-    notifyStore.notify({ message: "Konfirmasi password baru tidak sama.", type: "error" }); return;
+  if (
+    passwordForm.value.password !== passwordForm.value.password_confirmation
+  ) {
+    notifyStore.notify({
+      message: "Konfirmasi password baru tidak sama.",
+      type: "error",
+    });
+    return;
   }
   isChangingPassword.value = true;
   try {
     await api.put("/api/user/password", passwordForm.value);
-    passwordForm.value = { current_password: "", password: "", password_confirmation: "" };
-    notifyStore.notify({ message: "Password berhasil diubah. Perangkat lain telah dikeluarkan.", type: "success" });
+    passwordForm.value = {
+      current_password: "",
+      password: "",
+      password_confirmation: "",
+    };
+    notifyStore.notify({
+      message: "Password berhasil diubah. Perangkat lain telah dikeluarkan.",
+      type: "success",
+    });
   } catch (err) {
     const errors = err.response?.data?.errors;
-    notifyStore.notify({ message: errors?.current_password?.[0] || errors?.password?.[0] || err.response?.data?.message || "Gagal mengubah password.", type: "error" });
-  } finally { isChangingPassword.value = false; }
+    notifyStore.notify({
+      message:
+        errors?.current_password?.[0] ||
+        errors?.password?.[0] ||
+        err.response?.data?.message ||
+        "Gagal mengubah password.",
+      type: "error",
+    });
+  } finally {
+    isChangingPassword.value = false;
+  }
 }
 
 const iconMap = {
@@ -123,8 +149,17 @@ function applyTheme(newTheme, persist = true) {
 }
 
 async function savePreferences() {
-  try { await authStore.updateProfile({ currency: currency.value, theme: theme.value }); }
-  catch { notifyStore.notify({ message: "Preferensi belum tersimpan di server.", type: "error" }); }
+  try {
+    await authStore.updateProfile({
+      currency: currency.value,
+      theme: theme.value,
+    });
+  } catch {
+    notifyStore.notify({
+      message: "Preferensi belum tersimpan di server.",
+      type: "error",
+    });
+  }
 }
 onMounted(() => {
   if (categories.value.length === 0) {
@@ -188,39 +223,61 @@ async function handleExport(type) {
   if (exporting.value) return;
   const printWindow = type === "pdf" ? window.open("", "_blank") : null;
   if (type === "pdf" && !printWindow) {
-    notifyStore.notify({ message: "Izinkan jendela baru untuk mencetak atau menyimpan PDF.", type: "error" });
+    notifyStore.notify({
+      message: "Izinkan jendela baru untuk mencetak atau menyimpan PDF.",
+      type: "error",
+    });
     return;
   }
-  if (printWindow) { printWindow.opener = null; printWindow.document.body.textContent = "Menyiapkan transaksi…"; }
+  if (printWindow) {
+    printWindow.opener = null;
+    printWindow.document.body.textContent = "Menyiapkan transaksi…";
+  }
   exporting.value = true;
   try {
     if (type === "csv") {
-      const response = await api.get("/api/transactions/export", { responseType: "blob", timeout: 60000 });
+      const response = await api.get("/api/transactions/export", {
+        responseType: "blob",
+        timeout: 60000,
+      });
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
-      link.href = url; link.download = "ledger-transactions.csv";
-      document.body.append(link); link.click(); link.remove();
+      link.href = url;
+      link.download = "ledger-transactions.csv";
+      document.body.append(link);
+      link.click();
+      link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else {
       const transactions = [];
-      let page = 1, lastPage = 1;
+      let page = 1,
+        lastPage = 1;
       do {
-        const response = await api.get("/api/transactions", { params: { page, per_page: 100 } });
+        const response = await api.get("/api/transactions", {
+          params: { page, per_page: 100 },
+        });
         transactions.push(...response.data.data);
         lastPage = response.data.meta.last_page;
         page++;
       } while (page <= lastPage);
       if (printWindow.closed) return;
       printWindow.document.open();
-      printWindow.document.write(transactionPrintDocument(transactions, user.value?.currency || "IDR"));
+      printWindow.document.write(
+        transactionPrintDocument(transactions, user.value?.currency || "IDR"),
+      );
       printWindow.document.close();
       printWindow.focus();
       printWindow.print();
     }
   } catch (error) {
     printWindow?.close();
-    notifyStore.notify({ message: "Ekspor gagal. Silakan coba lagi.", type: "error" });
-  } finally { exporting.value = false; }
+    notifyStore.notify({
+      message: "Ekspor gagal. Silakan coba lagi.",
+      type: "error",
+    });
+  } finally {
+    exporting.value = false;
+  }
 }
 
 // Handler Logout
@@ -362,15 +419,79 @@ async function handleLogout() {
           </div>
 
           <!-- Change Password -->
-          <form @submit.prevent="handleChangePassword" class="space-y-3 pb-4 border-b border-line-200">
-            <div class="flex items-center gap-2"><KeyRound class="w-4 h-4 text-violet-600"/><p class="font-display font-bold text-xs text-ink-900">Ganti Password</p></div>
-            <div class="relative"><input v-model="passwordForm.current_password" :type="showCurrentPassword ? 'text' : 'password'" required autocomplete="current-password" placeholder="Password saat ini" class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/><button type="button" @click="showCurrentPassword=!showCurrentPassword" class="absolute right-3 top-3 text-ink-400"><EyeOff v-if="showCurrentPassword" class="w-4 h-4"/><Eye v-else class="w-4 h-4"/></button></div>
-            <div class="relative"><input v-model="passwordForm.password" :type="showNewPassword ? 'text' : 'password'" required minlength="8" autocomplete="new-password" placeholder="Password baru (min. 8 karakter, huruf & angka)" class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/><button type="button" @click="showNewPassword=!showNewPassword" class="absolute right-3 top-3 text-ink-400"><EyeOff v-if="showNewPassword" class="w-4 h-4"/><Eye v-else class="w-4 h-4"/></button></div>
-            <input v-model="passwordForm.password_confirmation" type="password" required minlength="8" autocomplete="new-password" placeholder="Ulangi password baru" class="w-full h-11 px-4 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"/>
-            <button :disabled="isChangingPassword" class="w-full h-10 rounded-xl bg-violet-600 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"><Loader2 v-if="isChangingPassword" class="w-4 h-4 animate-spin"/>Ubah Password</button>
+          <form
+            @submit.prevent="handleChangePassword"
+            class="space-y-3 pb-4 border-b border-line-200"
+          >
+            <div class="flex items-center gap-2">
+              <KeyRound class="w-4 h-4 text-violet-600" />
+              <p class="font-display font-bold text-xs text-ink-900">
+                Ganti Password
+              </p>
+            </div>
+            <div class="relative">
+              <input
+                v-model="passwordForm.current_password"
+                :type="showCurrentPassword ? 'text' : 'password'"
+                required
+                autocomplete="current-password"
+                placeholder="Password saat ini"
+                class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"
+              /><button
+                type="button"
+                @click="showCurrentPassword = !showCurrentPassword"
+                class="absolute right-3 top-3 text-ink-400"
+              >
+                <EyeOff v-if="showCurrentPassword" class="w-4 h-4" /><Eye
+                  v-else
+                  class="w-4 h-4"
+                />
+              </button>
+            </div>
+            <div class="relative">
+              <input
+                v-model="passwordForm.password"
+                :type="showNewPassword ? 'text' : 'password'"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                placeholder="Password baru (min. 8 karakter, huruf & angka)"
+                class="w-full h-11 px-4 pr-10 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"
+              /><button
+                type="button"
+                @click="showNewPassword = !showNewPassword"
+                class="absolute right-3 top-3 text-ink-400"
+              >
+                <EyeOff v-if="showNewPassword" class="w-4 h-4" /><Eye
+                  v-else
+                  class="w-4 h-4"
+                />
+              </button>
+            </div>
+            <input
+              v-model="passwordForm.password_confirmation"
+              type="password"
+              required
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Ulangi password baru"
+              class="w-full h-11 px-4 border border-line-200 rounded-xl text-xs focus:border-violet-600 focus:outline-none"
+            />
+            <button
+              :disabled="isChangingPassword"
+              class="w-full h-10 rounded-xl bg-violet-600 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Loader2
+                v-if="isChangingPassword"
+                class="w-4 h-4 animate-spin"
+              />Ubah Password
+            </button>
           </form>
 
-          <p class="text-xs text-ink-500">Perubahan yang berhasil disimpan tersimpan di server akun Anda. Gunakan ekspor untuk membuat salinan data.</p>
+          <p class="text-xs text-ink-500">
+            Perubahan yang berhasil disimpan tersimpan di server akun Anda.
+            Gunakan ekspor untuk membuat salinan data.
+          </p>
 
           <!-- Export Data Buttons -->
           <div class="space-y-2 pt-2">
@@ -382,7 +503,8 @@ async function handleLogout() {
             <div class="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                :disabled="exporting" @click="handleExport('csv')"
+                :disabled="exporting"
+                @click="handleExport('csv')"
                 class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileSpreadsheet class="w-4 h-4" />
@@ -391,7 +513,8 @@ async function handleLogout() {
 
               <button
                 type="button"
-                :disabled="exporting" @click="handleExport('pdf')"
+                :disabled="exporting"
+                @click="handleExport('pdf')"
                 class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileText class="w-4 h-4" />
@@ -460,7 +583,6 @@ async function handleLogout() {
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
                   <option value="id">Bahasa Indonesia</option>
-
                 </select>
                 <ChevronDown
                   class="w-4 h-4 text-ink-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"

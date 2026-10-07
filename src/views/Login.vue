@@ -29,7 +29,13 @@ async function handleSubmit() {
   try {
     await authStore.login(form.value);
     const redirect = route.query.redirect;
-    await router.push(typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard");
+    await router.push(
+      typeof redirect === "string" &&
+        redirect.startsWith("/") &&
+        !redirect.startsWith("//")
+        ? redirect
+        : "/dashboard",
+    );
   } catch (err) {
     const msg = err.response?.data?.message || "Email atau password salah.";
     errorMessage.value = msg;
@@ -66,7 +72,12 @@ async function handleSubmit() {
         </p>
       </div>
 
-      <div v-if="route.query.reset === 'success'" class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-sm">Password berhasil direset. Silakan masuk dengan password baru.</div>
+      <div
+        v-if="route.query.reset === 'success'"
+        class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-sm"
+      >
+        Password berhasil direset. Silakan masuk dengan password baru.
+      </div>
 
       <!-- Alert Error -->
       <div
