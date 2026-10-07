@@ -11,7 +11,7 @@ function setup() {
   let handler;
   vm.runInNewContext(source, {
     precacheAndRoute() {}, cleanupOutdatedCaches() {},
-    File, Response, URL, crypto: webcrypto,
+    File, Response, URL, URLSearchParams, crypto: webcrypto,
     caches: { open: async () => ({ put: async (key, response) => stored.set(key, response) }) },
     self: { location: { origin: 'https://ledger.test' }, addEventListener: (_, fn) => { handler = fn; } },
   });
@@ -21,7 +21,7 @@ function setup() {
       const form = new FormData();
       if (file) form.append('files', file);
       let result;
-      handler({ request: { method: 'POST', url: 'https://ledger.test/share-target', formData: async () => form }, respondWith: (r) => { result = r; } });
+      handler({ request: { method: 'POST', url: 'https://ledger.test/share-target', headers: new Headers(), formData: async () => form }, respondWith: (r) => { result = r; } });
       return await result;
     },
   };

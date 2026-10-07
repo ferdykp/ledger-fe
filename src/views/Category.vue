@@ -99,6 +99,7 @@ function confirmDelete(cat) {
 }
 
 async function handleCreate() {
+  if (isSubmitting.value) return;
   if (!form.value.name.trim()) return;
   isSubmitting.value = true;
   try {
@@ -119,6 +120,7 @@ async function handleCreate() {
 }
 
 async function handleUpdate() {
+  if (isSubmitting.value) return;
   if (!form.value.name.trim() || !selectedCategory.value) return;
   isSubmitting.value = true;
   try {
@@ -139,6 +141,7 @@ async function handleUpdate() {
 }
 
 async function handleDelete() {
+  if (isSubmitting.value) return;
   if (!selectedCategory.value) return;
   isSubmitting.value = true;
   try {

@@ -1,5 +1,6 @@
 <!-- ledger-web/src/views/Dashboard.vue -->
 <script setup>
+import { localDate, localMonth } from "@/utils/dates";
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
@@ -66,7 +67,7 @@ function privateTxMoney(tx) {
   return `${tx.type === "income" ? "+" : "-"}${formatRupiah(Number(tx.amount || 0))}`;
 }
 const monthlySavings = computed(() => monthlyIncome.value - monthlyExpense.value);
-const allMonthlyTransactions = ref([]);
+const monthlyReport = ref({ income: 0, expense: 0, categories: [] });
 const isLoadingTransactions = ref(false);
 
 const cashFlowMonths = ref([]);
@@ -107,8 +108,8 @@ function getGoalIcon(iconName) {
 }
 
 function getCurrentMonthStr() {
-  // Format sama seperti currentMonth di Budget.vue: new Date().toISOString().slice(0, 7)
-  return new Date().toISOString().slice(0, 7);
+  // Format sama seperti currentMonth di Budget.vue: localMonth()
+  return localMonth();
 }
 const currentMonthStr = computed(() => getCurrentMonthStr());
 
@@ -120,18 +121,8 @@ function formatRupiahShort(value) {
 }
 
 // 1. Total Pemasukan Bulan Ini (real, difilter bulan berjalan)
-const monthlyIncome = computed(() =>
-  allMonthlyTransactions.value
-    .filter((tx) => tx.type === "income")
-    .reduce((total, tx) => total + parseFloat(tx.amount || 0), 0),
-);
-
-// 2. Total Pengeluaran Bulan Ini (real, difilter bulan berjalan)
-const monthlyExpense = computed(() =>
-  allMonthlyTransactions.value
-    .filter((tx) => tx.type === "expense")
-    .reduce((total, tx) => total + parseFloat(tx.amount || 0), 0),
-);
+const monthlyIncome = computed(() => Number(monthlyReport.value.income));
+const monthlyExpense = computed(() => Number(monthlyReport.value.expense));
 
 // 3. Sisa Budget Bulanan — REAL, dari budget store (bukan dihitung ulang dari transaksi,
 // karena totalBudgetSpent di store sudah dihitung per kategori yang di-budget-kan)
@@ -142,19 +133,7 @@ const remainingBudget = computed(() => {
 });
 
 // 4. Kategori Pengeluaran Terbesar Bulan Ini (real, insight baru)
-const topSpendingCategory = computed(() => {
-  const map = {};
-  allMonthlyTransactions.value
-    .filter((tx) => tx.type === "expense")
-    .forEach((tx) => {
-      const name = tx.category?.name || "Lainnya";
-      map[name] = (map[name] || 0) + parseFloat(tx.amount || 0);
-    });
-  const entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
-  return entries.length > 0
-    ? { name: entries[0][0], amount: entries[0][1] }
-    : null;
-});
+const topSpendingCategory = computed(() => monthlyReport.value.categories[0] || null);
 
 // 5. Goal prioritas — REAL, dari goal store (progress_percent & remaining_amount
 // sudah dihitung backend, sama seperti priorityGoal di Goal.vue)
@@ -207,8 +186,11 @@ function getLastNMonths(n) {
 }
 
 let liveTimer;
+let refreshing = false;
 async function refreshDashboard() {
-  await Promise.all([accountStore.fetchAccounts(), fetchTransactionsData(), fetchCashFlowData(), budgetStore.fetchBudgets(currentMonthStr.value), goalStore.fetchGoals()]);
+  if (refreshing) return;
+  refreshing = true;
+  try { await Promise.all([accountStore.fetchAccounts(), fetchTransactionsData(), fetchCashFlowData(), budgetStore.fetchBudgets(localMonth()), goalStore.fetchGoals()]); } finally { refreshing = false; }
 }
 onMounted(() => {
   refreshDashboard();
@@ -231,13 +213,12 @@ async function fetchTransactionsData() {
     // FIX: sebelumnya tidak difilter bulan, jadi ikut menjumlahkan transaksi
     // sepanjang waktu padahal labelnya "bulan ini".
     const resAll = await api.get(
-      `/api/transactions?month=${currentMonthStr.value}`,
+      `/api/reports/monthly?month=${localMonth()}`,
     );
-    allMonthlyTransactions.value = resAll.data.data || resAll.data || [];
+    monthlyReport.value = resAll.data.data;
   } catch (err) {
     console.warn("Gagal memuat data transaksi:", err.message);
-    recentTransactions.value = [];
-    allMonthlyTransactions.value = [];
+
   } finally {
     isLoadingTransactions.value = false;
   }

@@ -92,6 +92,7 @@ function openEditModal(acc) {
 
 // Submit Edit
 async function handleUpdate() {
+  if (isUpdating.value) return;
   if (!editForm.value.name.trim()) return;
   isUpdating.value = true;
   try {
@@ -119,6 +120,7 @@ function confirmDelete(acc) {
 }
 
 async function handleDelete() {
+  if (isDeleting.value) return;
   if (!selectedAccount.value) return;
   isDeleting.value = true;
   try {

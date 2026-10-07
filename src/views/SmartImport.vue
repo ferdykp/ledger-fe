@@ -49,39 +49,6 @@ function pick(e) {
     fromShare.value = false;
   e.target.value = "";
 }
-// async function loadShared() {
-//   if (loading.value) {
-//     pendingShare = true;
-//     return;
-//   }
-//   if (route.query.source !== "share" || !("caches" in window)) return;
-//   fromShare.value = true;
-//   try {
-//     const cache = await caches.open("ledger-share-target-v1");
-//     const id =
-//       typeof route.query.shareId === "string" ? route.query.shareId : "";
-//     const key = id
-//       ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
-//       : "/__ledger_shared_file__";
-//     const res = await cache.match(key);
-//     if (res) {
-//       const blob = await res.blob();
-//       const name = decodeURIComponent(
-//         res.headers.get("X-Ledger-Name") || "shared-proof.jpg",
-//       );
-//       const accepted = setFile(new File([blob], name, { type: blob.type }));
-//       await cache.delete(key);
-//       await cache.delete("/__ledger_shared_meta__");
-//       if (accepted) await scan();
-//     } else {
-//       error.value =
-//         "Tidak ada gambar dari menu Share. Bagikan file gambar atau pilih dari galeri.";
-//     }
-//   } catch (e) {
-//     error.value =
-//       "Bukti dari menu Share belum dapat dibaca. Pilih file secara manual.";
-//   }
-// }
 async function loadShared() {
   if (loading.value) {
     pendingShare = true;
@@ -104,11 +71,6 @@ async function loadShared() {
       ? `/__ledger_shared_file__/${encodeURIComponent(id)}`
       : "/__ledger_shared_file__";
 
-    console.log("Share target:", {
-      source: route.query.source,
-      shareId: id,
-      cacheKey: key,
-    });
 
     const res = await cache.match(key);
 
@@ -121,10 +83,6 @@ async function loadShared() {
 
     const blob = await res.blob();
 
-    console.log("Shared blob:", {
-      size: blob.size,
-      type: blob.type,
-    });
 
     if (!blob.size) {
       error.value =
@@ -143,9 +101,8 @@ async function loadShared() {
 
     const accepted = setFile(sharedFile);
 
-    await cache.delete(key);
-
     if (accepted) {
+      await cache.delete(key);
       await scan();
     }
   } catch (e) {

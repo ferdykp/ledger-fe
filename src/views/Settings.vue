@@ -1,6 +1,6 @@
 <!-- ledger-web/src/views/Settings.vue -->
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
@@ -28,6 +28,9 @@ import {
   EyeOff,
 } from "lucide-vue-next";
 
+import api from "@/lib/axios";
+import { transactionPrintDocument } from "@/utils/export";
+const exporting = ref(false);
 const router = useRouter();
 const authStore = useAuthStore();
 const categoryStore = useCategoryStore();
@@ -68,7 +71,6 @@ const language = ref("id");
 const theme = ref(localStorage.getItem("theme") || "light");
 
 // State Keamanan & Logout
-const isCloudBackup = ref(true);
 const isSavingProfile = ref(false);
 const isLoggingOut = ref(false);
 const isChangingPassword = ref(false);
@@ -82,7 +84,7 @@ async function handleChangePassword() {
   }
   isChangingPassword.value = true;
   try {
-    await (await import("@/lib/axios")).default.put("/api/user/password", passwordForm.value);
+    await api.put("/api/user/password", passwordForm.value);
     passwordForm.value = { current_password: "", password: "", password_confirmation: "" };
     notifyStore.notify({ message: "Password berhasil diubah. Perangkat lain telah dikeluarkan.", type: "success" });
   } catch (err) {
@@ -108,9 +110,10 @@ function getCategoryIcon(name) {
   return Utensils;
 }
 
-function applyTheme(newTheme) {
+function applyTheme(newTheme, persist = true) {
   theme.value = newTheme;
   localStorage.setItem("theme", newTheme);
+  if (persist) void savePreferences();
 
   if (newTheme === "dark") {
     document.documentElement.classList.add("dark");
@@ -119,11 +122,15 @@ function applyTheme(newTheme) {
   }
 }
 
+async function savePreferences() {
+  try { await authStore.updateProfile({ currency: currency.value, theme: theme.value }); }
+  catch { notifyStore.notify({ message: "Preferensi belum tersimpan di server.", type: "error" }); }
+}
 onMounted(() => {
   if (categories.value.length === 0) {
     categoryStore.fetchCategories();
   }
-  applyTheme(theme.value);
+  applyTheme(theme.value, false);
 });
 
 // Trigger File Picker untuk Avatar
@@ -177,11 +184,43 @@ async function handleSaveProfile() {
   }
 }
 
-function handleExport(type) {
-  notifyStore.notify({
-    message: `Mengeksport data transaksi ke format ${type.toUpperCase()}...`,
-    type: "info",
-  });
+async function handleExport(type) {
+  if (exporting.value) return;
+  const printWindow = type === "pdf" ? window.open("", "_blank") : null;
+  if (type === "pdf" && !printWindow) {
+    notifyStore.notify({ message: "Izinkan jendela baru untuk mencetak atau menyimpan PDF.", type: "error" });
+    return;
+  }
+  if (printWindow) { printWindow.opener = null; printWindow.document.body.textContent = "Menyiapkan transaksi…"; }
+  exporting.value = true;
+  try {
+    if (type === "csv") {
+      const response = await api.get("/api/transactions/export", { responseType: "blob", timeout: 60000 });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url; link.download = "ledger-transactions.csv";
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } else {
+      const transactions = [];
+      let page = 1, lastPage = 1;
+      do {
+        const response = await api.get("/api/transactions", { params: { page, per_page: 100 } });
+        transactions.push(...response.data.data);
+        lastPage = response.data.meta.last_page;
+        page++;
+      } while (page <= lastPage);
+      if (printWindow.closed) return;
+      printWindow.document.open();
+      printWindow.document.write(transactionPrintDocument(transactions, user.value?.currency || "IDR"));
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  } catch (error) {
+    printWindow?.close();
+    notifyStore.notify({ message: "Ekspor gagal. Silakan coba lagi.", type: "error" });
+  } finally { exporting.value = false; }
 }
 
 // Handler Logout
@@ -331,27 +370,7 @@ async function handleLogout() {
             <button :disabled="isChangingPassword" class="w-full h-10 rounded-xl bg-violet-600 text-white text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50"><Loader2 v-if="isChangingPassword" class="w-4 h-4 animate-spin"/>Ubah Password</button>
           </form>
 
-          <!-- Backup Cloud Toggle -->
-          <div class="flex items-center justify-between pt-1">
-            <div>
-              <p class="font-display font-bold text-xs text-ink-900">
-                Backup Cloud
-              </p>
-              <p class="text-[11px] text-ink-400 font-medium">
-                Simpan data otomatis ke cloud
-              </p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                v-model="isCloudBackup"
-                class="sr-only peer"
-              />
-              <div
-                class="w-11 h-6 bg-line-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-paper-0 after:border-line-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"
-              ></div>
-            </label>
-          </div>
+          <p class="text-xs text-ink-500">Perubahan yang berhasil disimpan tersimpan di server akun Anda. Gunakan ekspor untuk membuat salinan data.</p>
 
           <!-- Export Data Buttons -->
           <div class="space-y-2 pt-2">
@@ -363,7 +382,7 @@ async function handleLogout() {
             <div class="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                @click="handleExport('csv')"
+                :disabled="exporting" @click="handleExport('csv')"
                 class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileSpreadsheet class="w-4 h-4" />
@@ -372,11 +391,11 @@ async function handleLogout() {
 
               <button
                 type="button"
-                @click="handleExport('pdf')"
+                :disabled="exporting" @click="handleExport('pdf')"
                 class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileText class="w-4 h-4" />
-                <span>PDF</span>
+                <span>Cetak / PDF</span>
               </button>
             </div>
           </div>
@@ -417,6 +436,7 @@ async function handleLogout() {
               <div class="relative">
                 <select
                   v-model="currency"
+                  @change="savePreferences"
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
                   <option value="IDR">IDR (Rp)</option>
@@ -440,7 +460,7 @@ async function handleLogout() {
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
                   <option value="id">Bahasa Indonesia</option>
-                  <option value="en">English</option>
+
                 </select>
                 <ChevronDown
                   class="w-4 h-4 text-ink-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"

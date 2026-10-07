@@ -1,22 +1,21 @@
 // ledger-web/src/stores/auth.js
 import { defineStore } from "pinia";
-import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed } from "vue";
+import router from "@/router";
 import api from "@/lib/axios";
 import { useNotificationStore } from "@/stores/notification";
 
 export const useAuthStore = defineStore("auth", () => {
-  const router = useRouter();
   const user = ref(null);
   // Deklarasikan variabel token sebagai ref
   const token = ref(localStorage.getItem("token") || "");
-  const isAuthenticated = ref(!!localStorage.getItem("token"));
+  const isAuthenticated = computed(() => Boolean(token.value));
   const notifyStore = useNotificationStore();
 
   async function fetchUser() {
     // Gunakan token.value untuk membaca nilai ref
     if (!token.value) {
-      isAuthenticated.value = false;
+
       user.value = null;
       return false;
     }
@@ -24,10 +23,10 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const response = await api.get("/api/user");
       user.value = response.data;
-      isAuthenticated.value = true;
+
       return true;
-    } catch {
-      logoutLocal();
+    } catch (error) {
+      if (error.response?.status === 401) logoutLocal();
       return false;
     }
   }
@@ -38,9 +37,9 @@ export const useAuthStore = defineStore("auth", () => {
 
     token.value = authToken;
     localStorage.setItem("token", authToken);
-    isAuthenticated.value = true;
 
-    await fetchUser();
+
+    user.value = response.data.data.user;
 
     notifyStore.notify({
       message: "Berhasil masuk ke akun Anda.",
@@ -52,13 +51,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function register(payload) {
     const response = await api.post("/api/register", payload);
-    const authToken = response.data.data.token;
 
-    // token.value = authToken;
-    // localStorage.setItem("token", authToken);
-    // isAuthenticated.value = true;
-
-    // await fetchUser();
 
     notifyStore.notify({
       message: "Registrasi berhasil! Silahkan Login.",
@@ -73,6 +66,8 @@ export const useAuthStore = defineStore("auth", () => {
       if (token.value) {
         await api.post("/api/logout");
       }
+    } catch {
+      // Always finish local logout even if the network is unavailable.
     } finally {
       logoutLocal();
       notifyStore.notify({
@@ -80,24 +75,21 @@ export const useAuthStore = defineStore("auth", () => {
         type: "info",
       });
 
-      router.push("/login");
+      await router.replace("/login");
     }
   }
 
   function logoutLocal() {
+    window.dispatchEvent(new Event("ledger:session-cleared"));
     localStorage.removeItem("token");
     token.value = "";
     user.value = null;
-    isAuthenticated.value = false;
+
   }
   // ledger-web/src/stores/auth.js
 
   async function updateProfile(formData) {
-    const response = await api.post("/api/user/profile", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await api.post("/api/user/profile", formData);
 
     user.value = response.data.data || response.data;
     return user.value;
@@ -113,5 +105,6 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     updateProfile,
     logout,
+    logoutLocal,
   };
 });

@@ -50,6 +50,7 @@ const isFormValid = computed(() => {
 });
 
 async function handleSubmit() {
+  if (isLoading.value) return;
   if (!isFormValid.value) return;
 
   isLoading.value = true;

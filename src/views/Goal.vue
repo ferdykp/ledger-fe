@@ -1,5 +1,6 @@
 <!-- ledger-web/src/views/Goal.vue -->
 <script setup>
+import { localDate, localMonth } from "@/utils/dates";
 import { ref, onMounted, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useGoalStore } from "@/stores/goal";
@@ -50,7 +51,7 @@ const goalForm = ref({
 
 const depositForm = ref({
   amount: 0,
-  date: new Date().toISOString().split("T")[0],
+  date: localDate(),
 });
 
 // Formatter Input Nominal Rupiah
@@ -133,7 +134,7 @@ function openDepositModal(goal, event) {
   selectedGoal.value = goal;
   depositForm.value = {
     amount: 0,
-    date: new Date().toISOString().split("T")[0],
+    date: localDate(),
   };
   isDepositModalOpen.value = true;
 }
@@ -146,6 +147,7 @@ function confirmDelete(goal, event) {
 }
 
 async function handleSaveGoal() {
+  if (isSubmitting.value) return;
   if (!goalForm.value.name.trim() || !goalForm.value.target_amount) return;
 
   isSubmitting.value = true;
@@ -196,6 +198,7 @@ async function handleDeposit() {
 }
 
 async function handleDeleteGoal() {
+  if (isSubmitting.value) return;
   if (!selectedGoal.value) return;
   isSubmitting.value = true;
   try {

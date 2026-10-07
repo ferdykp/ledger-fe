@@ -1,6 +1,7 @@
 <!-- ledger-web/src/views/TransactionHistory.vue -->
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { localDate, localMonth } from "@/utils/dates";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
@@ -24,6 +25,8 @@ import {
   Loader2,
 } from "lucide-vue-next";
 import api from "@/lib/axios";
+import { previousMonth } from "@/utils/dates";
+import { useNotificationStore } from "@/stores/notification";
 
 const router = useRouter();
 const accountStore = useAccountStore();
@@ -33,6 +36,9 @@ const { accounts } = storeToRefs(accountStore);
 const { categories } = storeToRefs(categoryStore);
 
 const transactions = ref([]);
+const page = ref(1), lastPage = ref(1);
+let requestVersion = 0;
+const notify = useNotificationStore();
 const isLoading = ref(false);
 
 // Filter & Search State
@@ -69,25 +75,30 @@ onMounted(async () => {
   if (categories.value.length === 0) categoryStore.fetchCategories();
 });
 
-async function fetchTransactions() {
+async function fetchTransactions(append = false) {
+  const version = ++requestVersion;
+  const requestedPage = append === true ? page.value + 1 : 1;
   isLoading.value = true;
   try {
-    const params = { limit: 500 };
+    const params = { page: requestedPage, per_page: 50 };
     if (searchQuery.value.trim()) params.search = searchQuery.value.trim();
     if (selectedCategory.value !== "all") params.category_id = selectedCategory.value;
     if (selectedAccount.value !== "all") params.account_id = selectedAccount.value;
     if (selectedType.value !== "all") params.type = selectedType.value;
-    if (selectedTime.value === "this_month") params.month = new Date().toISOString().slice(0, 7);
+    if (selectedTime.value === "this_month") params.month = localMonth();
     if (selectedTime.value === "last_month") {
-      const d = new Date(); d.setMonth(d.getMonth() - 1);
-      params.month = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      params.month = previousMonth();
     }
     const res = await api.get("/api/transactions", { params });
-    transactions.value = res.data.data || res.data || [];
+    if (version !== requestVersion) return;
+    const data = res.data.data || [];
+    transactions.value = append === true ? [...transactions.value, ...data] : data;
+    page.value = res.data.meta.current_page;
+    lastPage.value = res.data.meta.last_page;
   } catch (err) {
     console.warn("Gagal memuat riwayat transaksi:", err.message);
-    transactions.value = [];
-  } finally { isLoading.value = false; }
+
+  } finally { if (version === requestVersion) isLoading.value = false; }
 }
 
 let filterTimer;
@@ -97,28 +108,8 @@ watch([searchQuery, selectedTime, selectedCategory, selectedAccount, selectedTyp
 });
 
 // Filtering Logic
-const filteredTransactions = computed(() => {
-  return transactions.value.filter((tx) => {
-    const query = searchQuery.value.toLowerCase();
-    const noteMatch = tx.note?.toLowerCase().includes(query);
-    const categoryMatch = tx.category?.name?.toLowerCase().includes(query);
-    const accountMatch = tx.account?.name?.toLowerCase().includes(query);
-    const matchesSearch = !query || noteMatch || categoryMatch || accountMatch;
-
-    const matchesCategory =
-      selectedCategory.value === "all" ||
-      String(tx.category_id) === String(selectedCategory.value);
-
-    const matchesAccount =
-      selectedAccount.value === "all" ||
-      String(tx.account_id) === String(selectedAccount.value);
-
-    const matchesType =
-      selectedType.value === "all" || tx.type === selectedType.value;
-
-    return matchesSearch && matchesCategory && matchesAccount && matchesType;
-  });
-});
+const filteredTransactions = computed(() => transactions.value);
+onUnmounted(() => { clearTimeout(filterTimer); requestVersion++; });
 
 // Group Transactions by Date
 const groupedTransactions = computed(() => {
@@ -151,8 +142,8 @@ const groupedTransactions = computed(() => {
 });
 
 function formatDateLabel(dateStr) {
-  const today = new Date().toISOString().split("T")[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  const today = localDate();
+  const yesterday = localDate(new Date(Date.now() - 86400000));
 
   const dateObj = new Date(dateStr);
   const formattedDate = dateObj.toLocaleDateString("id-ID", {
@@ -167,16 +158,18 @@ function formatDateLabel(dateStr) {
 }
 
 async function duplicateTransaction(tx) {
+  if (isDeleting.value) return;
+  isDeleting.value = true;
   try {
     await api.post("/api/transactions", {
       type: tx.type, amount: tx.amount, account_id: tx.account_id,
       to_account_id: tx.related_account_id || null, category_id: tx.category_id || null,
-      date: new Date().toISOString().slice(0, 10), note: tx.note ? `${tx.note} (salinan)` : "Salinan transaksi",
+      date: localDate(), note: tx.note ? `${tx.note.slice(0, 490)} (salinan)` : "Salinan transaksi",
     });
     await fetchTransactions();
     await accountStore.fetchAccounts();
     window.dispatchEvent(new Event("ledger:data-changed"));
-  } catch (err) { console.error("Gagal menyalin transaksi", err); }
+  } catch (err) { notify.notify({ message: err.response?.data?.message || "Gagal menyalin transaksi.", type: "error" }); } finally { isDeleting.value = false; }
 }
 
 function openDeleteModal(tx) {
@@ -191,7 +184,7 @@ function closeDeleteModal() {
 }
 
 async function handleDelete() {
-  if (!transactionToDelete.value) return;
+  if (!transactionToDelete.value || isDeleting.value) return;
   isDeleting.value = true;
   try {
     await api.delete(`/api/transactions/${transactionToDelete.value.id}`);
@@ -209,7 +202,7 @@ async function handleDelete() {
     isDeleteModalOpen.value = false;
     transactionToDelete.value = null;
   } catch (err) {
-    console.error("Gagal menghapus transaksi:", err.message);
+    notify.notify({ message: err.response?.data?.message || "Gagal menghapus transaksi.", type: "error" });
   } finally {
     isDeleting.value = false;
   }
@@ -490,6 +483,7 @@ async function handleDelete() {
         </div>
       </div>
     </div>
+    <button v-if="page < lastPage" :disabled="isLoading" @click="fetchTransactions(true)" class="primary-button mx-auto">{{ isLoading ? 'Memuat…' : 'Muat transaksi berikutnya' }}</button>
   </div>
 </template>
 

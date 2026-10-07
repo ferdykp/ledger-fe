@@ -44,7 +44,7 @@ export const useBudgetStore = defineStore("budget", () => {
       budgets.value = Array.isArray(data) ? data : [];
     } catch (error) {
       console.warn("Gagal memuat budget:", error.message);
-      budgets.value = [];
+
     } finally {
       isLoading.value = false;
     }
@@ -56,7 +56,7 @@ export const useBudgetStore = defineStore("budget", () => {
     const newBudget = response.data.data || response.data;
 
     const index = budgets.value.findIndex(
-      (b) => b.category_id === newBudget.category_id,
+      (b) => b.id === newBudget.id,
     );
     if (index !== -1) {
       budgets.value[index] = newBudget;

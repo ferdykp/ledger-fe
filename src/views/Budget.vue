@@ -1,5 +1,6 @@
 <!-- ledger-web/src/views/Budget.vue -->
 <script setup>
+import { localDate, localMonth } from "@/utils/dates";
 import { ref, onMounted, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useBudgetStore } from "@/stores/budget";
@@ -35,7 +36,7 @@ const {
 const { categories } = storeToRefs(categoryStore);
 
 // Month Picker State
-const currentMonth = ref(new Date().toISOString().slice(0, 7));
+const currentMonth = ref(localMonth());
 
 // Modal States
 const isModalOpen = ref(false);
@@ -115,6 +116,7 @@ function openModal(budgetToEdit = null) {
 }
 
 async function handleSaveBudget() {
+  if (isSubmitting.value) return;
   if (!form.value.category_id || !form.value.amount_limit) return;
 
   isSubmitting.value = true;
@@ -143,6 +145,7 @@ function confirmDeleteBudget(budget) {
 }
 
 async function handleDeleteBudget() {
+  if (isDeleting.value) return;
   if (!budgetToDelete.value) return;
   isDeleting.value = true;
   try {

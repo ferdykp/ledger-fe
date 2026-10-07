@@ -22,6 +22,7 @@ const isLoading = ref(false);
 const errorMessage = ref("");
 
 async function handleSubmit() {
+  if (isLoading.value) return;
   isLoading.value = true;
   errorMessage.value = "";
 

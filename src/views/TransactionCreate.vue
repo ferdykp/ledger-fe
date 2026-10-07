@@ -1,5 +1,6 @@
 <!-- ledger-web/src/views/TransactionCreate.vue -->
 <script setup>
+import { localDate, localMonth } from "@/utils/dates";
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
@@ -62,7 +63,7 @@ const form = ref({
   category_id: null,
   account_id: "",
   to_account_id: "",
-  date: new Date().toISOString().split("T")[0],
+  date: localDate(),
   note: "",
 });
 
@@ -326,6 +327,7 @@ async function handleCreateAccount() {
 }
 
 async function handleSubmit() {
+  if (isLoading.value) return;
   if (!form.value.amount || Number(form.value.amount) <= 0) {
     notifyStore.notify({
       message: "Nominal transaksi wajib diisi.",
@@ -350,12 +352,21 @@ async function handleSubmit() {
     return;
   }
 
+  if (form.value.type === "transfer" && String(form.value.account_id) === String(form.value.to_account_id)) {
+    notifyStore.notify({ message: "Akun tujuan harus berbeda dari akun asal.", type: "error" });
+    return;
+  }
+  const payload = { ...form.value };
+  if (payload.type === "transfer") payload.category_id = null;
+  else payload.to_account_id = null;
+  const category = categories.value.find(item => item.id === payload.category_id);
+  if (category && category.type !== payload.type) payload.category_id = null;
   isLoading.value = true;
   try {
     if (isEditMode.value) {
-      await api.put(`/api/transactions/${route.params.id}`, form.value);
+      await api.put(`/api/transactions/${route.params.id}`, payload);
     } else {
-      await api.post("/api/transactions", form.value);
+      await api.post("/api/transactions", payload);
     }
     window.dispatchEvent(new Event("ledger:data-changed"));
     notifyStore.notify({

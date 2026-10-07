@@ -73,6 +73,7 @@ function handleClose() {
 }
 
 async function handleSubmit() {
+  if (isLoading.value) return;
   if (!form.value.name.trim()) {
     notifyStore.notify({
       message: "Nama dompet wajib diisi.",

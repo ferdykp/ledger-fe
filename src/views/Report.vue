@@ -32,15 +32,18 @@ const selectedMonth = ref(getCurrentMonthStr());
 const isLoading = ref(false);
 const report = ref({ income: 0, expense: 0, net: 0, previous: { income: 0, expense: 0, net: 0 }, categories: [], weekly: [] });
 
+let requestVersion = 0;
 async function fetchReportData() {
+  if (!selectedMonth.value) return;
+  const version = ++requestVersion;
   isLoading.value = true;
   try {
     const res = await api.get("/api/reports/monthly", { params: { month: selectedMonth.value } });
-    report.value = res.data.data;
+    if (version === requestVersion) report.value = res.data.data;
   } catch (err) {
     console.warn("Gagal memuat data laporan:", err.message);
-    report.value = { income: 0, expense: 0, net: 0, previous: { income: 0, expense: 0, net: 0 }, categories: [], weekly: [] };
-  } finally { isLoading.value = false; }
+
+  } finally { if (version === requestVersion) isLoading.value = false; }
 }
 
 let liveTimer;
@@ -51,6 +54,7 @@ onMounted(() => {
   liveTimer = setInterval(fetchReportData, 30000);
 });
 onUnmounted(() => {
+  requestVersion++;
   window.removeEventListener("focus", fetchReportData);
   window.removeEventListener("ledger:data-changed", fetchReportData);
   clearInterval(liveTimer);
