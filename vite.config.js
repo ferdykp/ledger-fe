@@ -28,31 +28,6 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         categories: ["finance", "productivity"],
-        // share_target: {
-        //   action: "/share-target",
-        //   method: "POST",
-        //   enctype: "multipart/form-data",
-        //   params: {
-        //     title: "title",
-        //     text: "text",
-        //     url: "url",
-        //     files: [
-        //       {
-        //         name: "files",
-        //         accept: [
-        //           "image/jpeg",
-        //           "image/jpg",
-        //           "image/png",
-        //           "image/webp",
-        //           ".jpg",
-        //           ".jpeg",
-        //           ".png",
-        //           ".webp",
-        //         ],
-        //       },
-        //     ],
-        //   },
-        // },
         share_target: {
           action: "/share-target",
           method: "POST",
@@ -62,7 +37,17 @@ export default defineConfig({
             files: [
               {
                 name: "files",
-                accept: ["image/jpeg", "image/png", "image/webp"],
+                accept: [
+                  "image/*",
+                  "image/jpeg",
+                  "image/jpg",
+                  "image/png",
+                  "image/webp",
+                  ".jpg",
+                  ".jpeg",
+                  ".png",
+                  ".webp",
+                ],
               },
             ],
           },
