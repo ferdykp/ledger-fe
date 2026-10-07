@@ -169,8 +169,7 @@ async function loadShared() {
     /*
      * Harus sama dengan CACHE NAME di src/sw.js
      */
-    const cache = await caches.open("ledger-share-target-v2");
-
+    const cache = await caches.open("ledger-share-target-v3");
     const id =
       typeof route.query.shareId === "string" ? route.query.shareId : "";
 

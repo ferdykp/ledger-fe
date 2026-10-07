@@ -3,161 +3,164 @@ import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-const SHARE_CACHE = "ledger-share-target-v2";
+const SHARE_CACHE = "ledger-share-target-v3";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  if (event.request.method !== "POST" || url.pathname !== "/share-target") {
-    return;
+  if (event.request.method === "POST" && url.pathname === "/share-target") {
+    event.respondWith(handleShare(event.request));
   }
-
-  event.respondWith(handleShare(event.request));
 });
 
 async function handleShare(request) {
-  const shareId = crypto.randomUUID();
+  const shareId =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const cache = await caches.open(SHARE_CACHE);
 
   let shareStatus = "no-file";
-  let detectedType = "";
-  let detectedName = "";
-  let debug = {};
+
+  const debug = {
+    method: request.method,
+    url: request.url,
+    contentType: request.headers.get("content-type") || "",
+    contentLength: request.headers.get("content-length") || "",
+    keys: [],
+    values: [],
+  };
 
   try {
-    const formData = await request.formData();
+    /*
+     * Clone request sebelum dibaca.
+     *
+     * Ini penting karena Request body merupakan stream
+     * dan hanya boleh dikonsumsi satu kali.
+     */
+    const clonedRequest = request.clone();
 
-    const entries = [...formData.entries()];
+    const formData = await clonedRequest.formData();
 
-    debug = {
-      keys: entries.map(([key]) => key),
-      values: entries.map(([key, value]) => ({
-        key,
-        kind: typeof value === "string" ? "text" : "file",
-        type: typeof value === "string" ? "text/plain" : value?.type || "",
-        name: typeof value === "string" ? "" : value?.name || "",
-        size: typeof value === "string" ? value.length : value?.size || 0,
-      })),
-    };
+    const entries = [];
+
+    for (const [key, value] of formData.entries()) {
+      entries.push([key, value]);
+
+      debug.keys.push(key);
+
+      if (typeof value === "string") {
+        debug.values.push({
+          key,
+          kind: "text",
+          type: "text/plain",
+          size: value.length,
+          preview: value.slice(0, 200),
+        });
+      } else {
+        debug.values.push({
+          key,
+          kind: "file",
+          name: value.name || "",
+          type: value.type || "",
+          size: value.size || 0,
+        });
+      }
+    }
 
     /*
-     * Jangan hanya bergantung pada MIME.
-     *
-     * Beberapa aplikasi Android / m-banking mengirim file dengan:
-     * application/octet-stream
-     * MIME kosong
-     * nama file tanpa extension
+     * Prioritas field "files" sesuai manifest.
      */
-    const candidates = entries
-      .map(([, value]) => value)
-      .filter(
-        (value) =>
-          typeof value !== "string" &&
-          value &&
-          typeof value.arrayBuffer === "function" &&
-          value.size > 0,
-      );
+    let shared = formData.get("files");
 
-    const shared =
-      candidates.find((value) =>
-        String(value.type || "").startsWith("image/"),
-      ) ||
-      candidates.find((value) =>
-        /\.(jpe?g|png|webp)$/i.test(value.name || ""),
-      ) ||
-      candidates[0];
+    /*
+     * Jika browser memakai field berbeda,
+     * cari Blob/File pertama.
+     */
+    if (!shared || typeof shared === "string" || !shared.size) {
+      shared = entries
+        .map(([, value]) => value)
+        .find(
+          (value) =>
+            typeof value !== "string" &&
+            value &&
+            typeof value.arrayBuffer === "function" &&
+            value.size > 0,
+        );
+    }
 
-    if (shared) {
+    if (shared && typeof shared !== "string") {
       if (shared.size > MAX_FILE_SIZE) {
         shareStatus = "too-large";
-      } else {
-        detectedType = shared.type || "application/octet-stream";
+      } else if (shared.size > 0) {
+        const originalName = shared.name || `shared-${Date.now()}`;
 
-        detectedName = shared.name || `shared-${Date.now()}`;
+        const originalType = shared.type || "application/octet-stream";
 
-        const cache = await caches.open(SHARE_CACHE);
+        /*
+         * Salin bytes terlebih dahulu.
+         *
+         * Jangan simpan File stream secara langsung.
+         */
+        const buffer = await shared.arrayBuffer();
 
         await cache.put(
-          `/__ledger_shared_file__/${shareId}`,
-          new Response(shared, {
+          new Request(`/__ledger_shared_file__/${shareId}`),
+          new Response(buffer, {
             headers: {
-              "Content-Type": detectedType,
-              "X-Ledger-Name": encodeURIComponent(detectedName),
+              "Content-Type": originalType,
+              "X-Ledger-Name": encodeURIComponent(originalName),
+              "X-Ledger-Size": String(shared.size),
               "X-Ledger-Created": String(Date.now()),
             },
           }),
         );
 
-        await cache.put(
-          `/__ledger_shared_meta__/${shareId}`,
-          new Response(
-            JSON.stringify({
-              shareId,
-              detectedType,
-              detectedName,
-              size: shared.size,
-              debug,
-            }),
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            },
-          ),
-        );
-
         shareStatus = "received";
       }
-    } else {
-      const cache = await caches.open(SHARE_CACHE);
-
-      await cache.put(
-        `/__ledger_shared_meta__/${shareId}`,
-        new Response(
-          JSON.stringify({
-            shareId,
-            debug,
-          }),
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        ),
-      );
     }
+
+    await saveMeta(cache, shareId, {
+      shareId,
+      shareStatus,
+      debug,
+    });
   } catch (error) {
     shareStatus = "error";
 
-    try {
-      const cache = await caches.open(SHARE_CACHE);
+    debug.error = error?.message || String(error);
 
-      await cache.put(
-        `/__ledger_shared_meta__/${shareId}`,
-        new Response(
-          JSON.stringify({
-            shareId,
-            error: String(error),
-          }),
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        ),
-      );
-    } catch {
-      // Jangan sampai debug menggagalkan redirect.
-    }
+    await saveMeta(cache, shareId, {
+      shareId,
+      shareStatus,
+      debug,
+    });
   }
 
   const target = new URL("/scan", self.location.origin);
 
-  target.search = new URLSearchParams({
-    source: "share",
-    shareId,
-    shareStatus,
-  }).toString();
+  target.searchParams.set("source", "share");
 
-  return Response.redirect(target.href, 303);
+  target.searchParams.set("shareId", shareId);
+
+  target.searchParams.set("shareStatus", shareStatus);
+
+  return Response.redirect(target.toString(), 303);
+}
+
+async function saveMeta(cache, shareId, data) {
+  try {
+    await cache.put(
+      new Request(`/__ledger_shared_meta__/${shareId}`),
+      new Response(JSON.stringify(data), {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    );
+  } catch (error) {
+    console.error("Failed saving share metadata:", error);
+  }
 }
