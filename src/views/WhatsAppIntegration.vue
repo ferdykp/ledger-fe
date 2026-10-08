@@ -1,4 +1,3 @@
-
 <script setup>
 import { computed, onMounted, ref, onUnmounted } from "vue";
 import {
@@ -15,6 +14,7 @@ import {
   Wallet,
   LockKeyhole,
   ArrowLeft,
+  Copy,
 } from "lucide-vue-next";
 import api from "@/lib/axios";
 import { useNotificationStore } from "@/stores/notification";
@@ -231,6 +231,15 @@ function backToPhone() {
   step.value = "phone";
   otp.value = "";
   error.value = "";
+}
+
+async function copyExample(value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    notifyUser("Contoh chat disalin.");
+  } catch {
+    notifyUser("Tidak dapat menyalin otomatis. Silakan salin teks manual.", "error");
+  }
 }
 
 function openWhatsApp() {
@@ -514,12 +523,14 @@ onUnmounted(() => {
             <h3 class="font-semibold text-ink-900">Contoh transaksi</h3>
           </div>
 
+          <p class="mb-3 text-xs leading-5 text-ink-600">Gunakan nama dompet yang sudah dibuat di Ledger. Ketik bantuan untuk panduan melalui WhatsApp.</p>
           <div class="space-y-3">
             <div
               v-for="(example, index) in [
                 { label: 'Pengeluaran', text: 'bensin 50rb bca' },
                 { label: 'Pengeluaran', text: 'makan 35k gopay' },
                 { label: 'Pemasukan', text: 'gaji 8jt masuk bca' },
+                { label: 'Panduan', text: 'bantuan' },
               ]"
               :key="index"
               class="rounded-2xl border border-ink-200 bg-ink-50 p-3.5"
@@ -527,9 +538,14 @@ onUnmounted(() => {
               <p class="mb-1 text-xs font-medium text-ink-500">
                 {{ example.label }}
               </p>
-              <p class="text-sm font-semibold text-ink-900">
-                {{ example.text }}
-              </p>
+              <div class="flex items-center justify-between gap-3">
+                <p class="min-w-0 break-words text-sm font-semibold text-ink-900">{{ example.text }}</p>
+                <button type="button" :aria-label="`Salin ${example.text}`"
+                  class="shrink-0 rounded-xl border border-ink-200 bg-white p-2 text-ink-700 transition hover:bg-ink-100"
+                  @click="copyExample(example.text)">
+                  <Copy :size="16" />
+                </button>
+              </div>
             </div>
           </div>
         </section>
