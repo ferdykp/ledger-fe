@@ -1,447 +1,514 @@
-<!-- ledger-web/src/views/Report.vue -->
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from "vue";
-import VueApexCharts from "vue3-apexcharts";
-import { formatRupiah } from "@/utils/formatters";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import {
-  Calendar,
-  ArrowDownRight,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   ArrowUpRight,
+  ReceiptText,
+  TrendingDown,
   Wallet,
-  Sparkles,
-  AlertTriangle,
-  TrendingUp,
-  ChevronDown,
+  LoaderCircle,
+  AlertCircle,
   ArrowRight,
 } from "lucide-vue-next";
+import VueApexCharts from "vue3-apexcharts";
 import api from "@/lib/axios";
+import { formatRupiah } from "@/utils/formatters";
+import { localDate, localMonth } from "@/utils/dates";
 
-function getCurrentMonthStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getPrevMonthStr(monthStr) {
-  const [year, month] = monthStr.split("-").map(Number); // month: 1-12
-  const date = new Date(year, month - 1, 1);
-  date.setMonth(date.getMonth() - 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-const selectedMonth = ref(getCurrentMonthStr());
-const isLoading = ref(false);
-const report = ref({
-  income: 0,
-  expense: 0,
-  net: 0,
-  previous: { income: 0, expense: 0, net: 0 },
-  categories: [],
-  weekly: [],
+const mode = ref("month");
+const month = ref(localMonth());
+const from = ref(`${localMonth()}-01`);
+const to = ref(localDate());
+const report = ref(null);
+const loading = ref(false);
+const error = ref("");
+const validation = ref("");
+const applied = ref(null);
+let controller;
+let version = 0;
+const dateLabel = (value) =>
+  new Date(`${value}T00:00:00`).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+const periodLabel = computed(() => {
+  if (!report.value) return "";
+  if (applied.value?.month)
+    return new Date(`${applied.value.month}-01T00:00:00`).toLocaleDateString(
+      "id-ID",
+      { month: "long", year: "numeric" },
+    );
+  return `${dateLabel(report.value.from)} – ${dateLabel(report.value.to)}`;
+});
+const pagination = computed(() => report.value?.transactions.meta);
+const comparison = computed(() => {
+  if (!report.value || report.value.previous_expense === null) return "";
+  const difference = report.value.expense - report.value.previous_expense;
+  if (!difference) return "Sama dengan bulan sebelumnya";
+  return `${formatRupiah(Math.abs(difference))} ${difference > 0 ? "lebih banyak" : "lebih sedikit"} dari bulan sebelumnya`;
 });
 
-let requestVersion = 0;
-async function fetchReportData() {
-  if (!selectedMonth.value) return;
-  const version = ++requestVersion;
-  isLoading.value = true;
+async function load(params, page = 1) {
+  const current = ++version;
+  controller?.abort();
+  controller = new AbortController();
+  loading.value = true;
+  error.value = "";
   try {
-    const res = await api.get("/api/reports/monthly", {
-      params: { month: selectedMonth.value },
+    const response = await api.get("/api/reports/expenses", {
+      params: { ...params, page },
+      signal: controller.signal,
     });
-    if (version === requestVersion) report.value = res.data.data;
-  } catch (err) {
-    console.warn("Gagal memuat data laporan:", err.message);
+    if (current !== version) return;
+    report.value = response.data.data;
+    applied.value = { ...params };
+  } catch (exception) {
+    if (current === version && exception.code !== "ERR_CANCELED")
+      error.value =
+        exception.response?.data?.message ||
+        "Rekap belum dapat dimuat. Periksa koneksi, lalu coba lagi.";
   } finally {
-    if (version === requestVersion) isLoading.value = false;
+    if (current === version) loading.value = false;
   }
 }
-
-let liveTimer;
-onMounted(() => {
-  fetchReportData();
-  window.addEventListener("focus", fetchReportData);
-  window.addEventListener("ledger:data-changed", fetchReportData);
-  liveTimer = setInterval(fetchReportData, 30000);
-});
-onUnmounted(() => {
-  requestVersion++;
-  window.removeEventListener("focus", fetchReportData);
-  window.removeEventListener("ledger:data-changed", fetchReportData);
-  clearInterval(liveTimer);
-});
-
-// Total bulan ini
-const totalIncome = computed(() => Number(report.value.income || 0));
-const totalExpense = computed(() => Number(report.value.expense || 0));
-const netSavings = computed(() => Number(report.value.net || 0));
-const prevIncome = computed(() => Number(report.value.previous?.income || 0));
-const prevExpense = computed(() => Number(report.value.previous?.expense || 0));
-const prevNetSavings = computed(() => Number(report.value.previous?.net || 0));
-
-// null artinya "tidak ada data bulan lalu untuk dibandingkan"
-function pctChange(current, previous) {
-  if (previous === 0) return current === 0 ? 0 : null;
-  return ((current - previous) / Math.abs(previous)) * 100;
-}
-
-function changeLabel(current, previous) {
-  const pct = pctChange(current, previous);
-  if (pct === null) return "Baru bulan ini";
-  if (previous === 0 && current === 0) return "Belum ada data";
-  const rounded = Math.round(pct);
-  const sign = rounded > 0 ? "+" : "";
-  return `${sign}${rounded}% vs bulan lalu`;
-}
-
-const incomeChangePct = computed(
-  () => pctChange(totalIncome.value, prevIncome.value) ?? 0,
-);
-const expenseChangePct = computed(
-  () => pctChange(totalExpense.value, prevExpense.value) ?? 0,
-);
-
-const incomeChangeLabel = computed(() =>
-  changeLabel(totalIncome.value, prevIncome.value),
-);
-const expenseChangeLabel = computed(() =>
-  changeLabel(totalExpense.value, prevExpense.value),
-);
-const savingsChangeLabel = computed(() =>
-  changeLabel(netSavings.value, prevNetSavings.value),
-);
-
-// Breakdown Pengeluaran per Kategori (diurutkan dari terbesar)
-const categoryBreakdown = computed(() =>
-  (report.value.categories || []).map((x) => ({
-    name: x.name,
-    amount: Number(x.amount || 0),
-  })),
-);
-
-const weeklySeries = computed(() => [
-  {
-    name: "Pemasukan",
-    data: (report.value.weekly || []).map((x) => Number(x.income || 0)),
-  },
+const trendSeries = computed(() => [
   {
     name: "Pengeluaran",
-    data: (report.value.weekly || []).map((x) => Number(x.expense || 0)),
+    data: (report.value?.trend || []).map((item) => item.expense),
+  },
+  {
+    name: "Pemasukan",
+    data: (report.value?.trend || []).map((item) => item.income),
   },
 ]);
-const weeklyChartOptions = computed(() => ({
-  chart: {
-    type: "area",
-    toolbar: { show: false },
-    animations: { enabled: true },
+const trendOptions = computed(() => ({
+  chart: { type: "bar", toolbar: { show: false }, fontFamily: "inherit" },
+  colors: ["#ef4444", "#10b981"],
+  dataLabels: { enabled: false },
+  plotOptions: { bar: { borderRadius: 3, columnWidth: "55%" } },
+  xaxis: {
+    categories: (report.value?.trend || []).map((item) => item.date),
+    labels: { rotate: -35 },
   },
-  dataLabels: { enabled: false },
-  stroke: { curve: "smooth", width: 3 },
-  xaxis: { categories: (report.value.weekly || []).map((x) => x.label) },
-  yaxis: { labels: { formatter: (v) => formatRupiah(v) } },
-  tooltip: { y: { formatter: (v) => formatRupiah(v) } },
-  legend: { show: false },
+  yaxis: {
+    labels: {
+      formatter: (value) =>
+        new Intl.NumberFormat("id-ID", { notation: "compact" }).format(value),
+    },
+  },
+  tooltip: { y: { formatter: formatRupiah } },
+  legend: { position: "top" },
 }));
-const categorySeries = computed(() =>
-  categoryBreakdown.value.map((x) => x.amount),
-);
-const categoryChartOptions = computed(() => ({
-  chart: { type: "donut" },
-  labels: categoryBreakdown.value.map((x) => x.name),
-  legend: { position: "bottom" },
-  dataLabels: { enabled: false },
-  tooltip: { y: { formatter: (v) => formatRupiah(v) } },
-  plotOptions: { pie: { donut: { size: "70%" } } },
-}));
-
-const topCategory = computed(() => categoryBreakdown.value[0] || null);
-
-// Insight riil, dihitung dari data transaksi — bukan teks statis
-const insight = computed(() => {
-  if (totalIncome.value === 0 && totalExpense.value === 0) {
-    return {
-      type: "neutral",
-      text: "Belum ada transaksi bulan ini. Yuk mulai catat pemasukan dan pengeluaranmu.",
-    };
+function apply() {
+  validation.value = "";
+  if (mode.value === "month" && !/^\d{4}-\d{2}$/.test(month.value)) {
+    validation.value = "Pilih bulan dan tahun terlebih dahulu.";
+    return;
   }
-
-  const savingsDiff = netSavings.value - prevNetSavings.value;
-
-  if (netSavings.value < 0) {
-    return {
-      type: "warning",
-      text: `Pengeluaranmu bulan ini ${formatRupiah(totalExpense.value)}, lebih besar dari pemasukan${
-        topCategory.value
-          ? `. Kategori terbesar: ${topCategory.value.name}`
-          : ""
-      }.`,
-    };
+  if (
+    mode.value === "range" &&
+    (!from.value || !to.value || from.value > to.value)
+  ) {
+    validation.value =
+      "Isi tanggal awal dan akhir. Tanggal akhir harus sama atau setelah tanggal awal.";
+    return;
   }
-
-  if (expenseChangePct.value > 15 && savingsDiff >= 0) {
-    return {
-      type: "info",
-      text: `Pengeluaran${topCategory.value ? ` di ${topCategory.value.name}` : ""} naik ${Math.round(
-        expenseChangePct.value,
-      )}% dibanding bulan lalu, tapi tabunganmu tetap naik ${formatRupiah(Math.abs(savingsDiff))} — dijaga terus.`,
-    };
+  return load(
+    mode.value === "month"
+      ? { month: month.value }
+      : { from: from.value, to: to.value },
+  );
+}
+function moveMonth(offset) {
+  if (!month.value) return;
+  const [year, value] = month.value.split("-").map(Number);
+  month.value = localMonth(new Date(year, value - 1 + offset, 1));
+  apply();
+}
+function preset(kind) {
+  if (kind === "month") {
+    mode.value = "month";
+    month.value = localMonth();
+  } else {
+    mode.value = "range";
+    to.value = localDate();
+    const start = new Date();
+    if (kind === "week") start.setDate(start.getDate() - 6);
+    from.value = localDate(start);
   }
-
-  if (expenseChangePct.value > 15 && savingsDiff < 0) {
-    return {
-      type: "warning",
-      text: `Pengeluaran${topCategory.value ? ` di ${topCategory.value.name}` : ""} naik ${Math.round(
-        expenseChangePct.value,
-      )}% dan tabunganmu turun ${formatRupiah(Math.abs(savingsDiff))} dibanding bulan lalu. Coba dipangkas bulan depan.`,
-    };
-  }
-
-  if (expenseChangePct.value < -5) {
-    return {
-      type: "positive",
-      text: `Mantap, pengeluaranmu turun ${Math.round(Math.abs(expenseChangePct.value))}% dari bulan lalu dan tabunganmu jadi ${formatRupiah(
-        netSavings.value,
-      )}.`,
-    };
-  }
-
-  return {
-    type: "neutral",
-    text: `Keuanganmu relatif stabil bulan ini dengan tabungan bersih ${formatRupiah(netSavings.value)}.`,
-  };
+  apply();
+}
+function refresh() {
+  if (applied.value && !loading.value)
+    load(applied.value, pagination.value?.current_page || 1);
+}
+onMounted(() => {
+  apply();
+  window.addEventListener("ledger:data-changed", refresh);
 });
-
-const insightIcon = computed(() => {
-  if (insight.value.type === "warning") return AlertTriangle;
-  if (insight.value.type === "info") return TrendingUp;
-  return Sparkles;
+onUnmounted(() => {
+  version++;
+  controller?.abort();
+  window.removeEventListener("ledger:data-changed", refresh);
 });
 </script>
 
 <template>
-  <div class="space-y-8 font-body">
-    <!-- Header Halaman -->
-    <div
-      class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-    >
+  <div class="page-shell space-y-6">
+    <header class="page-heading">
       <div>
-        <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Laporan Keuangan
-        </h1>
-        <p class="text-ink-600 text-sm mt-1">
-          Ringkasan performa finansialmu bulan ini.
+        <span class="eyebrow">Laporan keuangan</span>
+        <h1>Ke mana uangmu pergi?</h1>
+        <p>
+          Lihat total pengeluaran dan telusuri setiap transaksi dalam periode
+          pilihanmu.
         </p>
       </div>
-
-      <!-- Month Selector -->
-      <div class="relative self-start sm:self-auto">
-        <div
-          class="flex items-center gap-2 px-4 py-2.5 bg-paper-0 border border-line-200 rounded-2xl shadow-soft text-xs font-bold text-ink-900 cursor-pointer"
-        >
-          <Calendar class="w-4 h-4 text-violet-600" />
-          <input
-            v-model="selectedMonth"
-            type="month"
-            @change="fetchReportData"
-            class="bg-transparent border-none focus:outline-none cursor-pointer font-bold"
-          />
-          <ChevronDown class="w-3.5 h-3.5 text-ink-400" />
-        </div>
+      <div class="flex items-center gap-2 text-xs text-ink-500">
+        <CalendarDays class="w-4 h-4" />Rekap sesuai tanggal transaksi
       </div>
-    </div>
+    </header>
 
-    <!-- 3 TOP STAT CARDS -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Total Pemasukan Card -->
-      <div
-        class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-3 relative overflow-hidden"
-      >
-        <div class="flex items-center justify-between">
-          <span
-            class="text-[11px] font-bold text-ink-400 uppercase tracking-wider block"
-          >
-            TOTAL PEMASUKAN
-          </span>
-          <div
-            class="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center"
-          >
-            <ArrowDownRight class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <div
-            class="font-mono-money font-black text-2xl sm:text-3xl text-ink-900"
-          >
-            {{ formatRupiah(totalIncome) }}
-          </div>
-          <span
-            class="inline-block mt-2 px-2.5 py-0.5 font-bold text-[10px] rounded-md"
-            :class="
-              incomeChangePct >= 0
-                ? 'bg-emerald-100/80 text-emerald-700'
-                : 'bg-rose-100/80 text-rose-600'
-            "
-          >
-            {{ incomeChangeLabel }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Total Pengeluaran Card -->
-      <div
-        class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-3 relative overflow-hidden"
-      >
-        <div class="flex items-center justify-between">
-          <span
-            class="text-[11px] font-bold text-ink-400 uppercase tracking-wider block"
-          >
-            TOTAL PENGELUARAN
-          </span>
-          <div
-            class="w-9 h-9 rounded-2xl bg-rose-100 text-rose-500 flex items-center justify-center"
-          >
-            <ArrowUpRight class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <div
-            class="font-mono-money font-black text-2xl sm:text-3xl text-ink-900"
-          >
-            {{ formatRupiah(totalExpense) }}
-          </div>
-          <span
-            class="inline-block mt-2 px-2.5 py-0.5 font-bold text-[10px] rounded-md"
-            :class="
-              expenseChangePct > 0
-                ? 'bg-rose-100/80 text-rose-600'
-                : 'bg-emerald-100/80 text-emerald-700'
-            "
-          >
-            {{ expenseChangeLabel }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Tabungan Bersih Card -->
-      <div
-        class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-3 relative overflow-hidden"
-      >
-        <div class="flex items-center justify-between">
-          <span
-            class="text-[11px] font-bold text-ink-400 uppercase tracking-wider block"
-          >
-            TABUNGAN BERSIH
-          </span>
-          <div
-            class="w-9 h-9 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center"
-          >
-            <Wallet class="w-5 h-5" />
-          </div>
-        </div>
-        <div>
-          <div
-            class="font-mono-money font-black text-2xl sm:text-3xl text-violet-600"
-          >
-            {{ formatRupiah(netSavings) }}
-          </div>
-          <span
-            class="inline-block mt-2 px-2.5 py-0.5 bg-violet-100/80 text-violet-700 font-bold text-[10px] rounded-md"
-          >
-            {{ savingsChangeLabel }}
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN CHART AREA: TREND KEUANGAN -->
-    <div
-      class="bg-violet-50/40 border border-violet-100 rounded-3xl p-6 md:p-8 shadow-soft space-y-6"
+    <section
+      class="surface-card p-5 sm:p-6 space-y-5"
+      aria-label="Pilih periode rekap"
     >
-      <div class="flex items-center justify-between">
-        <h2 class="font-display font-bold text-lg text-ink-900">
-          Trend Keuangan
-        </h2>
-        <div class="flex items-center gap-4 text-xs font-bold">
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-            <span class="text-ink-600">Pemasukan</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
-            <span class="text-ink-600">Pengeluaran</span>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="isLoading"
-        class="h-64 flex items-center justify-center text-sm text-ink-400"
-      >
-        Memuat grafik...
-      </div>
-      <VueApexCharts
-        v-else
-        type="area"
-        height="280"
-        :options="weeklyChartOptions"
-        :series="weeklySeries"
-      />
-    </div>
-
-    <!-- BOTTOM SECTION: BREAKDOWN KATEGORI & INSIGHT LEDGER -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-      <!-- Breakdown Kategori (Card Kiri) -->
-      <div
-        class="lg:col-span-7 bg-paper-0 border border-line-200 rounded-3xl p-6 sm:p-8 shadow-soft flex flex-col justify-between space-y-6"
-      >
-        <h2 class="font-display font-bold text-lg text-ink-900">
-          Breakdown Kategori
-        </h2>
-
-        <div v-if="categoryBreakdown.length" class="py-2">
-          <VueApexCharts
-            type="donut"
-            height="310"
-            :options="categoryChartOptions"
-            :series="categorySeries"
-          />
-          <div class="text-center -mt-2 text-xs text-ink-500">
-            Total pengeluaran: <strong>{{ formatRupiah(totalExpense) }}</strong>
-          </div>
-        </div>
-        <div v-else class="py-16 text-center text-sm text-ink-400">
-          Belum ada pengeluaran bulan ini
-        </div>
-      </div>
-
-      <!-- Insight Ledger (Card Kanan Gradient Purple) — SEKARANG DINAMIS -->
-      <div
-        class="lg:col-span-5 bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-800 text-paper-0 rounded-3xl p-8 shadow-violet flex flex-col justify-between space-y-6 relative overflow-hidden"
-      >
-        <div class="space-y-4">
-          <div
-            class="flex items-center gap-2 text-violet-200 text-xs font-bold uppercase tracking-wider"
-          >
-            <component :is="insightIcon" class="w-4 h-4 text-amber-300" />
-            <span>Insight Ledger</span>
-          </div>
-
-          <p
-            class="font-display font-medium text-lg leading-relaxed text-violet-100"
-          >
-            {{ insight.text }}
-          </p>
-        </div>
-
-        <div>
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <div
+          class="inline-flex rounded-xl bg-base-100 p-1 gap-1"
+          aria-label="Jenis periode"
+        >
           <button
             type="button"
-            class="px-6 py-3 bg-rose-500 hover:bg-rose-600 text-paper-0 rounded-2xl font-bold text-xs shadow-soft flex items-center gap-2 cursor-pointer transition-all btn-bounce"
+            :aria-pressed="mode === 'month'"
+            @click="
+              mode = 'month';
+              validation = '';
+            "
+            class="px-4 py-2 rounded-lg text-sm font-semibold transition"
+            :class="
+              mode === 'month'
+                ? 'bg-paper-0 text-primary-600 shadow-sm'
+                : 'text-ink-500'
+            "
           >
-            <span>Lihat Detail Analisa</span>
-            <ArrowRight class="w-4 h-4" />
+            Bulanan
+          </button>
+          <button
+            type="button"
+            :aria-pressed="mode === 'range'"
+            @click="
+              mode = 'range';
+              validation = '';
+            "
+            class="px-4 py-2 rounded-lg text-sm font-semibold transition"
+            :class="
+              mode === 'range'
+                ? 'bg-paper-0 text-primary-600 shadow-sm'
+                : 'text-ink-500'
+            "
+          >
+            Rentang tanggal
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button class="secondary-button" @click="preset('today')">
+            Hari ini</button
+          ><button class="secondary-button" @click="preset('week')">
+            7 hari terakhir</button
+          ><button class="secondary-button" @click="preset('month')">
+            Bulan ini
           </button>
         </div>
       </div>
+      <form @submit.prevent="apply" class="flex flex-wrap items-end gap-3">
+        <div v-if="mode === 'month'" class="flex-1 min-w-0 sm:min-w-64">
+          <label for="recap-month" class="field-label">Bulan dan tahun</label>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              @click="moveMonth(-1)"
+              class="icon-button shrink-0"
+              aria-label="Bulan sebelumnya"
+            >
+              <ChevronLeft class="w-5 h-5" /></button
+            ><input
+              id="recap-month"
+              type="month"
+              v-model="month"
+              required
+              class="w-full min-w-0 px-3 bg-paper-0"
+            /><button
+              type="button"
+              @click="moveMonth(1)"
+              class="icon-button shrink-0"
+              aria-label="Bulan berikutnya"
+            >
+              <ChevronRight class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <template v-else>
+          <label class="flex-1 min-w-40"
+            ><span class="field-label">Tanggal awal</span
+            ><input
+              type="date"
+              v-model="from"
+              required
+              :max="to || undefined"
+              class="w-full px-3 bg-paper-0"
+          /></label>
+          <label class="flex-1 min-w-40"
+            ><span class="field-label">Tanggal akhir</span
+            ><input
+              type="date"
+              v-model="to"
+              required
+              :min="from || undefined"
+              class="w-full px-3 bg-paper-0"
+          /></label>
+        </template>
+        <button
+          type="submit"
+          :disabled="loading"
+          class="primary-button w-full sm:w-auto"
+        >
+          <LoaderCircle
+            v-if="loading"
+            class="w-4 h-4 animate-spin"
+          /><ReceiptText v-else class="w-4 h-4" />Tampilkan rekap
+        </button>
+      </form>
+      <p v-if="validation" role="alert" class="text-sm text-expense-600">
+        {{ validation }}
+      </p>
+      <p class="text-xs text-ink-500">
+        Tanggal awal dan akhir ikut dihitung. Transfer antar dompet tidak
+        dihitung sebagai pengeluaran.
+      </p>
+    </section>
+
+    <div
+      v-if="loading"
+      role="status"
+      class="surface-card p-12 flex items-center justify-center gap-3 text-ink-500"
+    >
+      <LoaderCircle class="w-5 h-5 animate-spin" />Menghitung rekap pengeluaran…
     </div>
+    <div v-else-if="error" role="alert" class="surface-card p-6 space-y-3">
+      <div class="flex items-center gap-2 text-expense-600">
+        <AlertCircle class="w-5 h-5" />{{ error }}
+      </div>
+      <button @click="apply" class="secondary-button">Coba lagi</button>
+    </div>
+    <template v-else-if="report">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold text-ink-900">{{ periodLabel }}</h2>
+        <span class="text-xs text-ink-500"
+          >{{ report.days }} hari kalender · {{ report.count }} transaksi
+          pengeluaran</span
+        >
+      </div>
+      <section
+        class="grid gap-4 lg:grid-cols-[1.4fr_1fr]"
+        aria-label="Ringkasan periode"
+      >
+        <article
+          class="rounded-3xl bg-primary-600 p-6 sm:p-8 text-white space-y-3"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium opacity-90">Total pengeluaran</span
+            ><ArrowUpRight class="w-5 h-5 opacity-80" />
+          </div>
+          <p
+            class="text-3xl sm:text-4xl font-extrabold tracking-tight break-words"
+            data-testid="expense-total"
+          >
+            {{ formatRupiah(report.expense) }}
+          </p>
+          <p class="text-sm opacity-90">
+            {{
+              comparison ||
+              "Semua pengeluaran dalam rentang tanggal yang dipilih."
+            }}
+          </p>
+          <div
+            class="pt-4 border-t border-white/20 flex flex-wrap gap-x-8 gap-y-3 text-sm"
+          >
+            <div>
+              <span class="block text-xs opacity-75"
+                >Rata-rata per hari kalender</span
+              ><strong>{{ formatRupiah(report.daily_average) }}</strong>
+            </div>
+            <div>
+              <span class="block text-xs opacity-75">Jumlah pengeluaran</span
+              ><strong>{{ report.count }} transaksi</strong>
+            </div>
+          </div>
+        </article>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <article class="surface-card p-5 flex gap-4 items-center">
+            <div class="p-3 rounded-2xl bg-income-100 text-income-600">
+              <TrendingDown class="w-5 h-5" />
+            </div>
+            <div>
+              <p class="text-xs text-ink-500">Total pemasukan</p>
+              <strong class="text-xl text-ink-900">{{
+                formatRupiah(report.income)
+              }}</strong>
+            </div>
+          </article>
+          <article class="surface-card p-5 flex gap-4 items-center">
+            <div class="p-3 rounded-2xl bg-base-100 text-primary-600">
+              <Wallet class="w-5 h-5" />
+            </div>
+            <div>
+              <p class="text-xs text-ink-500">
+                Selisih pemasukan − pengeluaran
+              </p>
+              <strong
+                class="text-xl"
+                :class="report.net < 0 ? 'text-expense-600' : 'text-ink-900'"
+                >{{ formatRupiah(report.net) }}</strong
+              >
+              <p class="text-xs text-ink-500 mt-1">
+                Selisih periode, bukan saldo dompet.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section
+        v-if="report.trend.length"
+        class="surface-card p-5 sm:p-6 min-w-0"
+        aria-label="Grafik arus kas"
+      >
+        <h2 class="font-bold text-ink-900">Pola pemasukan dan pengeluaran</h2>
+        <p class="text-sm text-ink-500 mt-1">
+          {{
+            report.trend_interval === "month"
+              ? "Dikelompokkan per bulan untuk rentang panjang."
+              : "Dikelompokkan per tanggal transaksi."
+          }}
+          Hanya periode dengan aktivitas yang ditampilkan.
+        </p>
+        <VueApexCharts
+          type="bar"
+          height="260"
+          :options="trendOptions"
+          :series="trendSeries"
+        />
+      </section>
+      <section class="surface-card p-5 sm:p-6" aria-label="Rincian kategori">
+        <h2 class="font-bold text-ink-900">Paling banyak untuk apa?</h2>
+        <p class="text-sm text-ink-500 mt-1">
+          Rincian kategori dari seluruh pengeluaran pada periode ini.
+        </p>
+        <p v-if="!report.count" class="py-8 text-center text-ink-500">
+          Belum ada pengeluaran pada periode ini. Coba pilih bulan atau tanggal
+          lain.
+        </p>
+        <div v-else class="grid md:grid-cols-2 gap-x-8 gap-y-5 mt-6">
+          <div
+            v-for="category in report.categories"
+            :key="category.id ?? 'none'"
+            class="min-w-0"
+          >
+            <div class="flex justify-between gap-3 text-sm">
+              <span class="font-semibold text-ink-900 truncate">{{
+                category.name
+              }}</span
+              ><strong class="shrink-0">{{
+                formatRupiah(category.amount)
+              }}</strong>
+            </div>
+            <div class="h-2 bg-base-100 rounded-full mt-2 overflow-hidden">
+              <div
+                class="h-full bg-primary-600 rounded-full"
+                :style="{ width: `${category.percentage}%` }"
+              />
+            </div>
+            <p class="text-xs text-ink-500 mt-1.5">
+              {{ category.percentage }}% dari pengeluaran ·
+              {{ category.count }} transaksi
+            </p>
+          </div>
+        </div>
+      </section>
+      <section
+        class="surface-card overflow-hidden"
+        aria-label="Daftar pengeluaran"
+      >
+        <div class="p-5 sm:p-6 border-b border-line-200">
+          <h2 class="font-bold text-ink-900">Pengeluarannya apa saja?</h2>
+          <p class="text-sm text-ink-500 mt-1">
+            Urutan terbaru lebih dahulu. Klik transaksi untuk melihat atau
+            mengubah rinciannya.
+          </p>
+        </div>
+        <div v-if="!report.count" class="p-10 text-center text-ink-500">
+          <ReceiptText class="w-8 h-8 mx-auto mb-3" />
+          <p>Tidak ada transaksi pengeluaran.</p>
+        </div>
+        <div v-else class="divide-y divide-line-200">
+          <router-link
+            v-for="tx in report.transactions.data"
+            :key="tx.id"
+            :to="`/transactions/${tx.id}/edit`"
+            class="flex items-center gap-3 sm:gap-4 p-5 hover:bg-base-50 transition"
+          >
+            <div
+              class="hidden sm:grid w-10 h-10 shrink-0 rounded-xl bg-expense-100 text-expense-600 place-items-center"
+            >
+              <ReceiptText class="w-4 h-4" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold text-sm text-ink-900 truncate">
+                {{
+                  tx.note || tx.category?.name || "Pengeluaran tanpa catatan"
+                }}
+              </p>
+              <p class="text-xs text-ink-500 mt-1 break-words">
+                {{ dateLabel(tx.date) }} ·
+                {{ tx.category?.name || "Tanpa kategori" }} ·
+                {{ tx.account?.name || "Dompet tidak tersedia" }}
+              </p>
+            </div>
+            <strong class="text-sm text-expense-600 shrink-0">{{
+              formatRupiah(tx.amount)
+            }}</strong
+            ><ArrowRight class="w-4 h-4 text-ink-400 shrink-0" />
+          </router-link>
+        </div>
+        <div
+          v-if="report.count"
+          class="border-t border-line-200 p-4 flex flex-wrap gap-3 items-center justify-between"
+        >
+          <p class="text-xs text-ink-500">
+            {{ pagination.from }}–{{ pagination.to }} dari
+            {{ pagination.total }} transaksi · Total di atas mencakup semua
+            halaman.
+          </p>
+          <div class="flex gap-2">
+            <button
+              class="secondary-button"
+              :disabled="pagination.current_page === 1"
+              @click="load(applied, pagination.current_page - 1)"
+            >
+              Sebelumnya</button
+            ><button
+              class="secondary-button"
+              :disabled="pagination.current_page === pagination.last_page"
+              @click="load(applied, pagination.current_page + 1)"
+            >
+              Berikutnya
+            </button>
+          </div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
