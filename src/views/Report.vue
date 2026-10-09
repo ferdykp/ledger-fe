@@ -12,7 +12,7 @@ import {
   AlertCircle,
   ArrowRight,
 } from "lucide-vue-next";
-import VueApexCharts from "vue3-apexcharts";
+import VueApexCharts from "@/lib/charts";
 import api from "@/lib/axios";
 import { formatRupiah } from "@/utils/formatters";
 import { localDate, localMonth } from "@/utils/dates";

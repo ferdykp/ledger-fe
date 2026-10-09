@@ -37,7 +37,11 @@ async function handleSubmit() {
         : "/dashboard",
     );
   } catch (err) {
-    const msg = err.response?.data?.message || "Email atau password salah.";
+    const msg =
+      err.response?.data?.message ||
+      (!err.response
+        ? "Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi."
+        : "Belum berhasil masuk. Silakan coba lagi.");
     errorMessage.value = msg;
 
     notificationStore.notify({

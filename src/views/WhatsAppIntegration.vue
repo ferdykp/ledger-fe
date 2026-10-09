@@ -48,7 +48,7 @@ const maskedPhone = computed(() => {
 });
 
 const formattedPendingPhone = computed(() =>
-  pendingPhone.value ? `+${pendingPhone.value}` : ""
+  pendingPhone.value ? `+${pendingPhone.value}` : "",
 );
 
 const whatsappUrl = computed(() => {
@@ -65,7 +65,9 @@ function getErrorMessage(err) {
     if (first) return String(first);
   }
 
-  return data?.message || err?.message || "Terjadi kesalahan. Silakan coba lagi.";
+  return (
+    data?.message || err?.message || "Terjadi kesalahan. Silakan coba lagi."
+  );
 }
 
 function normalizePhone(value) {
@@ -132,10 +134,9 @@ async function sendOtp() {
   loading.value = true;
 
   try {
-    const { data } = await api.post(
-      "/api/integrations/whatsapp/otp/send",
-      { phone_number: number }
-    );
+    const { data } = await api.post("/api/integrations/whatsapp/otp/send", {
+      phone_number: number,
+    });
 
     pendingPhone.value = data?.data?.phone_number || number;
     otp.value = "";
@@ -185,10 +186,9 @@ async function resendOtp() {
   loading.value = true;
 
   try {
-    const { data } = await api.post(
-      "/api/integrations/whatsapp/otp/send",
-      { phone_number: pendingPhone.value }
-    );
+    const { data } = await api.post("/api/integrations/whatsapp/otp/send", {
+      phone_number: pendingPhone.value,
+    });
 
     otp.value = "";
     startCountdown(data?.data?.resend_after || 60);
@@ -238,7 +238,10 @@ async function copyExample(value) {
     await navigator.clipboard.writeText(value);
     notifyUser("Contoh chat disalin.");
   } catch {
-    notifyUser("Tidak dapat menyalin otomatis. Silakan salin teks manual.", "error");
+    notifyUser(
+      "Tidak dapat menyalin otomatis. Silakan salin teks manual.",
+      "error",
+    );
   }
 }
 
@@ -262,18 +265,22 @@ onUnmounted(() => {
   <div class="mx-auto max-w-5xl space-y-6 pb-12">
     <!-- Header -->
     <div class="space-y-2">
-      <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ink-500">
+      <div
+        class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ink-500"
+      >
         <MessageCircle :size="15" />
         Integrations
       </div>
 
-      <h1 class="font-display text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">
+      <h1
+        class="font-display text-2xl font-bold tracking-tight text-ink-900 md:text-3xl"
+      >
         WhatsApp Integration
       </h1>
 
       <p class="max-w-2xl text-sm leading-6 text-ink-600">
-        Hubungkan nomor WhatsApp Anda untuk mencatat pemasukan,
-        pengeluaran, dan transfer langsung melalui chat.
+        Hubungkan nomor WhatsApp Anda untuk mencatat pemasukan, pengeluaran, dan
+        transfer langsung melalui chat.
       </p>
     </div>
 
@@ -285,11 +292,18 @@ onUnmounted(() => {
       <LoaderCircle :size="26" class="animate-spin text-ink-500" />
     </div>
 
-    <div v-else class="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+    <div
+      v-else
+      class="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]"
+    >
       <!-- Main -->
-      <section class="min-w-0 rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-7">
+      <section
+        class="min-w-0 rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-7"
+      >
         <div class="mb-7 flex items-start gap-3">
-          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ink-900 text-white">
+          <div
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ink-900 text-white"
+          >
             <MessageCircle :size="23" />
           </div>
 
@@ -306,9 +320,11 @@ onUnmounted(() => {
 
           <span
             class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-            :class="connected
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-ink-100 text-ink-600'"
+            :class="
+              connected
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-ink-100 text-ink-600'
+            "
           >
             {{ connected ? "Connected" : "Not connected" }}
           </span>
@@ -334,7 +350,10 @@ onUnmounted(() => {
         <!-- Step 1: Phone -->
         <div v-if="!connected && step === 'phone'" class="space-y-6">
           <div class="space-y-2">
-            <label for="wa-phone" class="block text-sm font-semibold text-ink-900">
+            <label
+              for="wa-phone"
+              class="block text-sm font-semibold text-ink-900"
+            >
               Nomor WhatsApp
             </label>
 
@@ -358,8 +377,8 @@ onUnmounted(() => {
             </div>
 
             <p class="text-xs leading-5 text-ink-500">
-              Gunakan nomor WhatsApp aktif yang dapat menerima pesan.
-              Format 08..., 628..., atau +628... didukung.
+              Gunakan nomor WhatsApp aktif yang dapat menerima pesan. Format
+              08..., 628..., atau +628... didukung.
             </p>
           </div>
 
@@ -378,8 +397,8 @@ onUnmounted(() => {
           <div class="flex items-start gap-3 rounded-2xl bg-ink-50 p-4">
             <LockKeyhole :size="18" class="mt-0.5 shrink-0 text-ink-600" />
             <p class="text-xs leading-5 text-ink-600">
-              Ledger menggunakan kode OTP untuk memastikan nomor
-              WhatsApp tersebut benar-benar berada dalam kendali Anda.
+              Ledger menggunakan kode OTP untuk memastikan nomor WhatsApp
+              tersebut benar-benar berada dalam kendali Anda.
             </p>
           </div>
         </div>
@@ -395,14 +414,16 @@ onUnmounted(() => {
             <p class="mt-3 text-sm leading-6 text-ink-600">
               Kami telah meminta pengiriman kode 6 digit ke
               <span class="font-semibold text-ink-900">
-                {{ formattedPendingPhone }}
-              </span>.
-              Masukkan kode yang diterima melalui WhatsApp.
+                {{ formattedPendingPhone }} </span
+              >. Masukkan kode yang diterima melalui WhatsApp.
             </p>
           </div>
 
           <div class="space-y-2">
-            <label for="wa-otp" class="block text-sm font-semibold text-ink-900">
+            <label
+              for="wa-otp"
+              class="block text-sm font-semibold text-ink-900"
+            >
               Kode verifikasi
             </label>
 
@@ -436,7 +457,9 @@ onUnmounted(() => {
             {{ loading ? "Memverifikasi..." : "Verifikasi WhatsApp" }}
           </button>
 
-          <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div
+            class="flex flex-wrap items-center justify-between gap-3 text-sm"
+          >
             <button
               type="button"
               class="inline-flex items-center gap-2 font-medium text-ink-600 hover:text-ink-900"
@@ -477,7 +500,9 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4">
+            <div
+              class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4"
+            >
               <p class="text-xs text-ink-500">Nomor terverifikasi</p>
               <p class="mt-1 font-semibold text-ink-900">
                 {{ maskedPhone }}
@@ -517,13 +542,18 @@ onUnmounted(() => {
 
       <!-- Right information panel -->
       <aside class="space-y-5">
-        <section class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6">
+        <section
+          class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6"
+        >
           <div class="mb-4 flex items-center gap-2">
             <Wallet :size="19" class="text-ink-900" />
             <h3 class="font-semibold text-ink-900">Contoh transaksi</h3>
           </div>
 
-          <p class="mb-3 text-xs leading-5 text-ink-600">Gunakan nama dompet yang sudah dibuat di Ledger. Ketik bantuan untuk panduan melalui WhatsApp.</p>
+          <p class="mb-3 text-xs leading-5 text-ink-600">
+            Gunakan nama dompet yang sudah dibuat di Ledger. Ketik bantuan untuk
+            panduan melalui WhatsApp.
+          </p>
           <div class="space-y-3">
             <div
               v-for="(example, index) in [
@@ -531,6 +561,11 @@ onUnmounted(() => {
                 { label: 'Pengeluaran', text: 'makan 35k gopay' },
                 { label: 'Pemasukan', text: 'gaji 8jt masuk bca' },
                 { label: 'Panduan', text: 'bantuan' },
+                { label: 'Daftar dompet', text: 'dompet' },
+                { label: 'Saldo dompet', text: 'saldo bca' },
+                { label: 'Rekap harian', text: 'ringkasan hari ini' },
+                { label: 'Rekap bulanan', text: 'ringkasan bulan ini' },
+                { label: 'Riwayat', text: '5 transaksi terakhir' },
               ]"
               :key="index"
               class="rounded-2xl border border-ink-200 bg-ink-50 p-3.5"
@@ -539,10 +574,17 @@ onUnmounted(() => {
                 {{ example.label }}
               </p>
               <div class="flex items-center justify-between gap-3">
-                <p class="min-w-0 break-words text-sm font-semibold text-ink-900">{{ example.text }}</p>
-                <button type="button" :aria-label="`Salin ${example.text}`"
+                <p
+                  class="min-w-0 break-words text-sm font-semibold text-ink-900"
+                >
+                  {{ example.text }}
+                </p>
+                <button
+                  type="button"
+                  :aria-label="`Salin ${example.text}`"
                   class="shrink-0 rounded-xl border border-ink-200 bg-white p-2 text-ink-700 transition hover:bg-ink-100"
-                  @click="copyExample(example.text)">
+                  @click="copyExample(example.text)"
+                >
                   <Copy :size="16" />
                 </button>
               </div>
@@ -550,16 +592,18 @@ onUnmounted(() => {
           </div>
         </section>
 
-        <section class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6">
+        <section
+          class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6"
+        >
           <div class="flex items-center gap-2">
             <ShieldCheck :size="19" class="text-ink-900" />
             <h3 class="font-semibold text-ink-900">Keamanan transaksi</h3>
           </div>
 
           <p class="mt-3 text-sm leading-6 text-ink-600">
-            Ledger akan meminta konfirmasi sebelum transaksi disimpan.
-            Parser lokal memproses pesan terlebih dahulu dan Groq
-            digunakan sebagai fallback bila diperlukan.
+            Ledger akan meminta konfirmasi sebelum transaksi disimpan. Parser
+            lokal memproses pesan terlebih dahulu dan Groq digunakan sebagai
+            fallback bila diperlukan.
           </p>
         </section>
       </aside>

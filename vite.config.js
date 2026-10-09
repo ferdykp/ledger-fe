@@ -5,6 +5,26 @@ import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "chart-core", test: /apexcharts\/dist\/core\.esm\.js$/ },
+          ],
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    include: [
+      "apexcharts/core",
+      "apexcharts/area",
+      "apexcharts/bar",
+      "apexcharts/features/legend",
+      "apexcharts/features/keyboard",
+    ],
+  },
   plugins: [
     vue(),
     tailwindcss(),
@@ -78,6 +98,7 @@ export default defineConfig({
         ],
       },
       injectManifest: {
+        rollupFormat: "iife",
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       devOptions: { enabled: false },

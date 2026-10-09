@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useBudgetStore } from "@/stores/budget";
 import { useGoalStore } from "@/stores/goal";
 import { formatRupiah } from "@/utils/formatters";
-import VueApexCharts from "vue3-apexcharts";
+import VueApexCharts from "@/lib/charts";
 import {
   Plus,
   TrendingUp,

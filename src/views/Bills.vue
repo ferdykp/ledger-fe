@@ -1,6 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import api from "@/lib/axios";
+import { useBills } from "@/composables/useBills";
 import {
   Plus,
   ReceiptText,
@@ -12,118 +11,26 @@ import {
   Bell,
 } from "lucide-vue-next";
 import { formatRupiah } from "@/utils/formatters";
-import { localDate } from "@/utils/dates";
-import { useNotificationStore } from "@/stores/notification";
-const notify = useNotificationStore();
-const bills = ref([]),
-  loading = ref(false),
-  saving = ref(false),
-  open = ref(false),
-  editing = ref(null);
-const defaults = () => ({
-  name: "",
-  amount: "",
-  due_date: localDate(),
-  frequency: "monthly",
-  status: "active",
-  category: "",
-  note: "",
-  reminder_enabled: true,
-});
-const form = ref(defaults());
-const upcoming = computed(() =>
-  bills.value.filter((b) => b.status === "active"),
-);
-const reminders = computed(() =>
-  upcoming.value.filter(
-    (b) => b.reminder_enabled && String(b.due_date).slice(0, 10) <= localDate(),
-  ),
-);
-const monthly = computed(() =>
-  upcoming.value.reduce(
-    (sum, b) =>
-      sum +
-      Number(b.amount) *
-        ({ yearly: 1 / 12, weekly: 52 / 12, once: 0, monthly: 1 }[
-          b.frequency
-        ] ?? 0),
-    0,
-  ),
-);
-async function load() {
-  loading.value = true;
-  try {
-    bills.value = (await api.get("/api/bills")).data.data;
-  } catch {
-    /* Shared API handler presents connection errors. */
-  } finally {
-    loading.value = false;
-  }
-}
-function add() {
-  if (saving.value) return;
-  editing.value = null;
-  form.value = defaults();
-  open.value = true;
-}
-function edit(bill) {
-  if (saving.value) return;
-  editing.value = bill;
-  form.value = { ...bill, due_date: String(bill.due_date).slice(0, 10) };
-  open.value = true;
-}
-function close() {
-  if (!saving.value) open.value = false;
-}
-async function mutate(action, message) {
-  if (saving.value) return;
-  saving.value = true;
-  try {
-    await action();
-    open.value = false;
-    await load();
-    notify.notify({ message });
-  } catch (error) {
-    notify.notify({
-      message:
-        error.response?.data?.message ||
-        "Perubahan belum tersimpan. Silakan coba lagi.",
-      type: "error",
-    });
-  } finally {
-    saving.value = false;
-  }
-}
-function save() {
-  const payload = { ...form.value, amount: Number(form.value.amount) };
-  return mutate(
-    () =>
-      editing.value
-        ? api.put(`/api/bills/${editing.value.id}`, payload)
-        : api.post("/api/bills", payload),
-    "Tagihan berhasil disimpan.",
-  );
-}
-function paid(bill) {
-  return mutate(
-    () => api.post(`/api/bills/${bill.id}/paid`),
-    "Tagihan ditandai lunas. Jadwal berikutnya disiapkan untuk tagihan berulang.",
-  );
-}
-function del(bill) {
-  if (confirm(`Hapus tagihan ${bill.name}?`))
-    return mutate(
-      () => api.delete(`/api/bills/${bill.id}`),
-      "Tagihan dihapus.",
-    );
-}
-function dueLabel(value) {
-  return new Date(String(value).slice(0, 10) + "T00:00:00").toLocaleDateString(
-    "id-ID",
-    { day: "numeric", month: "short", year: "numeric" },
-  );
-}
-onMounted(load);
+const {
+  bills,
+  loading,
+  saving,
+  open,
+  editing,
+  form,
+  summary,
+  page,
+  lastPage,
+  loadError,
+  load,
+  add,
+  edit,
+  close,
+  save,
+  paid,
+  del,
+  dueLabel,
+} = useBills();
 </script>
 <template>
   <div class="page-shell">
@@ -144,29 +51,33 @@ onMounted(load);
       <div class="surface-card p-5">
         <span class="field-label">Tagihan aktif</span
         ><strong class="text-2xl tracking-[-.04em]">{{
-          upcoming.length
+          summary.active_count
         }}</strong>
       </div>
       <div class="surface-card p-5 sm:col-span-2">
         <span class="field-label">Estimasi biaya rutin / bulan</span
         ><strong class="text-2xl tracking-[-.04em] font-mono-money">{{
-          formatRupiah(monthly)
+          formatRupiah(summary.monthly_total)
         }}</strong>
       </div>
     </div>
     <p
-      v-if="reminders.length"
+      v-if="summary.overdue_count"
       role="status"
       class="surface-card p-4 text-amber-700"
     >
-      {{ reminders.length }} tagihan sudah jatuh tempo:
-      {{ reminders.map((b) => b.name).join(", ") }}.
+      {{ summary.overdue_count }} tagihan sudah jatuh tempo: Periksa tanggal
+      jatuh tempo pada daftar tagihan.
     </p>
     <p class="text-xs text-ink-500">
       Tandai lunas mencatat status tagihan; catat pembayaran di Transaksi untuk
       memperbarui saldo.
     </p>
-    <div class="surface-card overflow-hidden">
+    <p v-if="loadError" role="alert" class="text-expense-600">
+      Daftar belum berhasil diperbarui.
+      <button @click="load(page)" class="underline">Coba lagi</button>
+    </p>
+    <div class="surface-card overflow-hidden" :aria-busy="loading">
       <div
         class="p-5 border-b border-line-200 flex items-center justify-between"
       >
@@ -240,6 +151,31 @@ onMounted(load);
             </button>
           </div>
         </div>
+      </div>
+    </div>
+    <div
+      class="flex items-center justify-between gap-3 mt-4"
+      v-if="lastPage > 1"
+    >
+      <span class="text-sm text-ink-500"
+        >Halaman {{ page }} dari {{ lastPage }} · Ringkasan mencakup semua
+        halaman</span
+      >
+      <div class="flex gap-2">
+        <button
+          class="secondary-button"
+          :disabled="loading || page <= 1"
+          @click="load(page - 1)"
+        >
+          Sebelumnya
+        </button>
+        <button
+          class="secondary-button"
+          :disabled="loading || page >= lastPage"
+          @click="load(page + 1)"
+        >
+          Berikutnya
+        </button>
       </div>
     </div>
     <div
