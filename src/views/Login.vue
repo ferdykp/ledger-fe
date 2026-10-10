@@ -1,9 +1,9 @@
 <script setup>
+import AuthLayout from "@/components/AuthLayout.vue";
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useNotificationStore } from "../stores/notification";
-import logoImg from "../assets/ledger-icon.png";
 import { Mail, Lock, Eye, EyeOff } from "lucide-vue-next";
 
 const router = useRouter();
@@ -55,24 +55,15 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-lavender-50 flex items-center justify-center p-4 text-ink-900 font-body"
-  >
-    <div
-      class="w-full max-w-md bg-paper-0 border border-line-200 rounded-md p-6 md:p-8 shadow-card space-y-6"
-    >
+  <AuthLayout>
+    <div class="space-y-6">
       <!-- Header -->
       <div class="space-y-4 text-center">
-        <div class="flex w-full items-center justify-center">
-          <div class="w-22 bg-lavender-50 rounded-2xl">
-            <img :src="logoImg" alt="Ledger Logo" />
-          </div>
-        </div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Welcome Back
+          Selamat datang kembali
         </h1>
         <p class="text-ink-600 font-medium text-md">
-          Masuk ke akun Ledger kamu untuk lanjut atur keuangan.
+          Masuk untuk melihat keuangan dan melanjutkan rencana Anda.
         </p>
       </div>
 
@@ -80,7 +71,7 @@ async function handleSubmit() {
         v-if="route.query.reset === 'success'"
         class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-sm"
       >
-        Password berhasil direset. Silakan masuk dengan password baru.
+        Kata sandi berhasil direset. Silakan masuk dengan kata sandi baru.
       </div>
 
       <!-- Alert Error -->
@@ -104,6 +95,7 @@ async function handleSubmit() {
             />
             <input
               id="email"
+              autocomplete="email"
               v-model="form.email"
               type="email"
               required
@@ -113,17 +105,17 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <!-- Input Password dengan Link Lupa Password & Toggle Visibility -->
+        <!-- Input kata sandi dengan Link Lupa kata sandi & Toggle Visibility -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
             <label for="password" class="block text-xs font-medium text-ink-600"
-              >Password</label
+              >Kata sandi</label
             >
             <router-link
               to="/forgot-password"
               class="text-xs font-medium text-indigo-600 hover:underline"
             >
-              Lupa password?
+              Lupa kata sandi?
             </router-link>
           </div>
           <div class="relative flex items-center">
@@ -132,6 +124,7 @@ async function handleSubmit() {
             />
             <input
               id="password"
+              autocomplete="current-password"
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
               required
@@ -141,6 +134,9 @@ async function handleSubmit() {
             <button
               type="button"
               @click="showPassword = !showPassword"
+              :aria-label="
+                showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'
+              "
               class="absolute right-3 text-ink-600 hover:text-ink-900 focus:outline-none cursor-pointer"
             >
               <EyeOff v-if="showPassword" class="w-4 h-4" />
@@ -153,7 +149,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full h-10 bg-indigo-600 text-paper-0 font-medium text-sm rounded-md hover:bg-indigo-600/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
+          class="w-full h-10 bg-indigo-600 text-white font-medium text-sm rounded-md hover:bg-indigo-600/90 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
         >
           <span v-if="!isLoading">Masuk</span>
           <span v-else class="text-xs">Memproses...</span>
@@ -173,5 +169,5 @@ async function handleSubmit() {
         </router-link>
       </div>
     </div>
-  </div>
+  </AuthLayout>
 </template>

@@ -169,16 +169,16 @@ async function handleDeleteBudget() {
     <!-- Header Halaman -->
     <div class="flex items-center justify-between">
       <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-        Budget Bulanan
+        Anggaran bulanan
       </h1>
 
       <button
         type="button"
         @click="openModal()"
-        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-paper-0 rounded-2xl font-bold text-sm shadow-violet btn-bounce cursor-pointer"
+        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-white rounded-2xl font-bold text-sm shadow-violet btn-bounce cursor-pointer"
       >
         <Plus class="w-4 h-4 stroke-[2.5]" />
-        <span>Buat Budget</span>
+        <span>Buat anggaran</span>
       </button>
     </div>
 
@@ -188,7 +188,7 @@ async function handleDeleteBudget() {
     >
       <div class="space-y-2">
         <span class="text-xs font-semibold text-ink-600 block">
-          Total Pengeluaran / Budget
+          Total Pengeluaran / Anggaran
         </span>
         <div class="flex items-baseline gap-2 flex-wrap">
           <span
@@ -242,7 +242,7 @@ async function handleDeleteBudget() {
         >
           <Target class="w-10 h-10 text-ink-300 mx-auto" />
           <p class="text-sm font-semibold text-ink-600">
-            Belum ada budget yang diset untuk bulan ini.
+            Belum ada anggaran yang diset untuk bulan ini.
           </p>
         </div>
       </template>
@@ -329,10 +329,15 @@ async function handleDeleteBudget() {
       </template>
     </div>
 
-    <!-- Modal Set / Edit Limit Budget -->
+    <!-- Modal Set / Edit anggaran -->
     <div
       v-if="isModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -341,11 +346,12 @@ async function handleDeleteBudget() {
           class="px-6 py-4 border-b border-line-200 flex items-center justify-between"
         >
           <h3 class="font-display font-bold text-base text-ink-900">
-            {{ editingBudgetId ? "Edit Budget" : "Buat Budget Baru" }}
+            {{ editingBudgetId ? "Edit anggaran" : "Buat anggaran baru" }}
           </h3>
           <button
             @click="isModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -407,10 +413,10 @@ async function handleDeleteBudget() {
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
-              <span>Simpan Budget</span>
+              <span>Simpan anggaran</span>
             </button>
           </div>
         </form>
@@ -420,7 +426,12 @@ async function handleDeleteBudget() {
     <!-- Modal Konfirmasi Hapus Budget -->
     <div
       v-if="isDeleteModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDeleteModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-sm bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center animate-in fade-in zoom-in-95 duration-150"
@@ -432,10 +443,10 @@ async function handleDeleteBudget() {
         </div>
         <div>
           <h3 class="font-display font-bold text-base text-ink-900">
-            Hapus Limit Budget?
+            Hapus anggaran?
           </h3>
           <p class="text-xs text-ink-600 mt-1">
-            Budget untuk kategori
+            Anggaran untuk kategori
             <span class="font-bold text-ink-900">{{
               budgetToDelete?.category?.name
             }}</span>
@@ -452,7 +463,7 @@ async function handleDeleteBudget() {
           <button
             @click="handleDeleteBudget"
             :disabled="isDeleting"
-            class="py-2.5 bg-expense-600 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-expense-600 text-white font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ isDeleting ? "Menghapus..." : "Ya, Hapus" }}</span>

@@ -269,13 +269,13 @@ onUnmounted(() => {
         class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-ink-500"
       >
         <MessageCircle :size="15" />
-        Integrations
+        Integrasi
       </div>
 
       <h1
         class="font-display text-2xl font-bold tracking-tight text-ink-900 md:text-3xl"
       >
-        WhatsApp Integration
+        Integrasi WhatsApp
       </h1>
 
       <p class="max-w-2xl text-sm leading-6 text-ink-600">
@@ -287,7 +287,7 @@ onUnmounted(() => {
     <!-- Loading -->
     <div
       v-if="pageLoading"
-      class="flex min-h-72 items-center justify-center rounded-3xl border border-ink-200 bg-white"
+      class="flex min-h-72 items-center justify-center rounded-3xl border border-line-200 bg-paper-0"
     >
       <LoaderCircle :size="26" class="animate-spin text-ink-500" />
     </div>
@@ -298,16 +298,16 @@ onUnmounted(() => {
     >
       <!-- Main -->
       <section
-        class="min-w-0 rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-7"
+        class="min-w-0 rounded-3xl border border-line-200 bg-paper-0 p-5 shadow-sm sm:p-7"
       >
-        <div class="mb-7 flex items-start gap-3">
+        <div class="mb-7 flex flex-wrap items-start gap-3">
           <div
-            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ink-900 text-white"
+            class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#17352b] text-white"
           >
             <MessageCircle :size="23" />
           </div>
 
-          <div class="min-w-0 flex-1">
+          <div class="min-w-[160px] flex-1">
             <h2 class="font-semibold text-ink-900">Koneksi WhatsApp</h2>
             <p class="mt-1 text-sm text-ink-600">
               {{
@@ -323,10 +323,10 @@ onUnmounted(() => {
             :class="
               connected
                 ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-ink-100 text-ink-600'
+                : 'bg-base-100 text-ink-600'
             "
           >
-            {{ connected ? "Connected" : "Not connected" }}
+            {{ connected ? "Terhubung" : "Belum terhubung" }}
           </span>
         </div>
 
@@ -371,7 +371,7 @@ onUnmounted(() => {
                 autocomplete="tel"
                 placeholder="0812 3456 7890"
                 :disabled="loading"
-                class="w-full rounded-2xl border border-ink-200 bg-white py-3.5 pl-12 pr-4 text-sm text-ink-900 outline-none transition focus:border-ink-900 focus:ring-2 focus:ring-ink-900/10 disabled:opacity-60"
+                class="w-full rounded-2xl border border-line-200 bg-paper-0 py-3.5 pl-12 pr-4 text-sm text-ink-900 outline-none transition focus:border-ink-900 focus:ring-2 focus:ring-ink-900/10 disabled:opacity-60"
                 @keyup.enter="sendOtp"
               />
             </div>
@@ -385,7 +385,7 @@ onUnmounted(() => {
           <button
             type="button"
             :disabled="loading || !phone.trim()"
-            class="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#17352b] px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             @click="sendOtp"
           >
             <LoaderCircle v-if="loading" :size="18" class="animate-spin" />
@@ -405,7 +405,7 @@ onUnmounted(() => {
 
         <!-- Step 2: OTP -->
         <div v-else-if="!connected && step === 'verify'" class="space-y-6">
-          <div class="rounded-2xl border border-ink-200 bg-ink-50 p-5">
+          <div class="rounded-2xl border border-line-200 bg-ink-50 p-5">
             <div class="flex items-center gap-2">
               <ShieldCheck :size="20" class="text-ink-900" />
               <h3 class="font-semibold text-ink-900">Verifikasi nomor</h3>
@@ -436,7 +436,7 @@ onUnmounted(() => {
               maxlength="6"
               placeholder="000000"
               :disabled="loading"
-              class="w-full rounded-2xl border border-ink-200 bg-white px-4 py-4 text-center font-mono text-2xl font-bold tracking-[0.45em] text-ink-900 outline-none transition focus:border-ink-900 focus:ring-2 focus:ring-ink-900/10 disabled:opacity-60"
+              class="w-full rounded-2xl border border-line-200 bg-paper-0 px-4 py-4 text-center font-mono text-2xl font-bold tracking-[0.45em] text-ink-900 outline-none transition focus:border-ink-900 focus:ring-2 focus:ring-ink-900/10 disabled:opacity-60"
               @input="otp = otp.replace(/\D/g, '').slice(0, 6)"
               @keyup.enter="verifyOtp"
             />
@@ -449,7 +449,7 @@ onUnmounted(() => {
           <button
             type="button"
             :disabled="loading || otp.length !== 6"
-            class="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#17352b] px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
             @click="verifyOtp"
           >
             <LoaderCircle v-if="loading" :size="18" class="animate-spin" />
@@ -501,7 +501,7 @@ onUnmounted(() => {
             </div>
 
             <div
-              class="mt-5 rounded-xl border border-emerald-200 bg-white/80 p-4"
+              class="mt-5 rounded-xl border border-emerald-200 bg-paper-0/80 p-4"
             >
               <p class="text-xs text-ink-500">Nomor terverifikasi</p>
               <p class="mt-1 font-semibold text-ink-900">
@@ -514,7 +514,7 @@ onUnmounted(() => {
             <button
               type="button"
               :disabled="!whatsappUrl"
-              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-ink-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#17352b] px-5 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               @click="openWhatsApp"
             >
               <MessageCircle :size="19" />
@@ -529,7 +529,7 @@ onUnmounted(() => {
             <button
               type="button"
               :disabled="loading"
-              class="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+              class="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-paper-0 px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
               @click="disconnect"
             >
               <LoaderCircle v-if="loading" :size="17" class="animate-spin" />
@@ -543,7 +543,7 @@ onUnmounted(() => {
       <!-- Right information panel -->
       <aside class="space-y-5">
         <section
-          class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6"
+          class="rounded-3xl border border-line-200 bg-paper-0 p-5 shadow-sm sm:p-6"
         >
           <div class="mb-4 flex items-center gap-2">
             <Wallet :size="19" class="text-ink-900" />
@@ -568,7 +568,7 @@ onUnmounted(() => {
                 { label: 'Riwayat', text: '5 transaksi terakhir' },
               ]"
               :key="index"
-              class="rounded-2xl border border-ink-200 bg-ink-50 p-3.5"
+              class="rounded-2xl border border-line-200 bg-ink-50 p-3.5"
             >
               <p class="mb-1 text-xs font-medium text-ink-500">
                 {{ example.label }}
@@ -582,7 +582,7 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :aria-label="`Salin ${example.text}`"
-                  class="shrink-0 rounded-xl border border-ink-200 bg-white p-2 text-ink-700 transition hover:bg-ink-100"
+                  class="shrink-0 rounded-xl border border-line-200 bg-paper-0 p-2 text-ink-700 transition hover:bg-base-100"
                   @click="copyExample(example.text)"
                 >
                   <Copy :size="16" />
@@ -593,7 +593,7 @@ onUnmounted(() => {
         </section>
 
         <section
-          class="rounded-3xl border border-ink-200 bg-white p-5 shadow-sm sm:p-6"
+          class="rounded-3xl border border-line-200 bg-paper-0 p-5 shadow-sm sm:p-6"
         >
           <div class="flex items-center gap-2">
             <ShieldCheck :size="19" class="text-ink-900" />

@@ -1,7 +1,7 @@
 <script setup>
+import AuthLayout from "@/components/AuthLayout.vue";
 import { ref } from "vue";
 import api from "@/lib/axios";
-import logoImg from "@/assets/ledger-icon.png";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-vue-next";
 const email = ref("");
 const loading = ref(false);
@@ -26,17 +26,12 @@ async function submit() {
 }
 </script>
 <template>
-  <div
-    class="min-h-screen bg-lavender-50 flex items-center justify-center p-4 font-body text-ink-900"
-  >
-    <div
-      class="w-full max-w-md bg-paper-0 border border-line-200 rounded-2xl p-6 md:p-8 shadow-card space-y-6"
-    >
+  <AuthLayout>
+    <div class="space-y-6">
       <div class="text-center space-y-3">
-        <img :src="logoImg" class="w-20 mx-auto" alt="Ledger" />
-        <h1 class="font-display text-2xl font-bold">Lupa Password</h1>
+        <h1 class="font-display text-2xl font-bold">Lupa kata sandi</h1>
         <p class="text-sm text-ink-600">
-          Masukkan email akun. Kami akan mengirim tautan reset password.
+          Masukkan email akun. Kami akan mengirim tautan atur ulang kata sandi.
         </p>
       </div>
       <div
@@ -47,11 +42,14 @@ async function submit() {
       </div>
       <form v-else @submit.prevent="submit" class="space-y-4">
         <div>
-          <label class="block text-xs font-medium text-ink-600 mb-1.5"
+          <label
+            for="reset-email"
+            class="block text-xs font-medium text-ink-600 mb-1.5"
             >Alamat Email</label
           >
           <div class="relative">
             <Mail class="absolute left-3 top-3 w-4 h-4 text-ink-400" /><input
+              id="reset-email"
               v-model.trim="email"
               required
               type="email"
@@ -73,8 +71,8 @@ async function submit() {
       <router-link
         to="/login"
         class="flex justify-center items-center gap-2 text-xs font-semibold text-indigo-600"
-        ><ArrowLeft class="w-4 h-4" />Kembali ke login</router-link
+        ><ArrowLeft class="w-4 h-4" />Kembali ke halaman masuk</router-link
       >
     </div>
-  </div>
+  </AuthLayout>
 </template>

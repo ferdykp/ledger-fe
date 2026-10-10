@@ -406,21 +406,20 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div
-    class="min-h-[85vh] flex items-center justify-center p-2 sm:p-4 font-body"
-  >
+  <div class="transaction-editor page-shell">
     <div
-      class="w-full max-w-lg bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
+      class="w-full max-w-2xl mx-auto bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
     >
       <!-- Header -->
       <div
         class="px-6 py-5 border-b border-line-200 flex items-center justify-between"
       >
-        <h2 class="font-display font-bold text-lg text-ink-900">
+        <h1 class="font-display font-bold text-lg text-ink-900">
           {{ isEditMode ? "Edit Transaksi" : "Tambah Transaksi" }}
-        </h2>
+        </h1>
         <button
-          @click="router.back()"
+          @click="router.push('/transactions')"
+          aria-label="Kembali ke transaksi"
           class="p-1 text-ink-600 hover:text-ink-900 rounded-full hover:bg-base-50 cursor-pointer"
         >
           <X class="w-5 h-5" />
@@ -439,7 +438,7 @@ async function handleSubmit() {
             class="flex-1 py-2 rounded-full text-xs font-bold transition-all cursor-pointer text-center"
             :class="
               form.type === 'expense'
-                ? 'bg-violet-600 text-paper-0 shadow-soft'
+                ? 'bg-violet-600 text-white shadow-soft'
                 : 'text-ink-600 hover:text-ink-900'
             "
           >
@@ -454,7 +453,7 @@ async function handleSubmit() {
             class="flex-1 py-2 rounded-full text-xs font-bold transition-all cursor-pointer text-center"
             :class="
               form.type === 'income'
-                ? 'bg-violet-600 text-paper-0 shadow-soft'
+                ? 'bg-violet-600 text-white shadow-soft'
                 : 'text-ink-600 hover:text-ink-900'
             "
           >
@@ -469,7 +468,7 @@ async function handleSubmit() {
             class="flex-1 py-2 rounded-full text-xs font-bold transition-all cursor-pointer text-center"
             :class="
               form.type === 'transfer'
-                ? 'bg-violet-600 text-paper-0 shadow-soft'
+                ? 'bg-violet-600 text-white shadow-soft'
                 : 'text-ink-600 hover:text-ink-900'
             "
           >
@@ -489,12 +488,13 @@ async function handleSubmit() {
               >Rp</span
             >
             <input
+              aria-label="Jumlah transaksi"
               v-model="formattedAmount"
               type="tel"
               inputmode="numeric"
               placeholder="0"
               required
-              class="w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
+              class="transaction-amount w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
             />
           </div>
         </div>
@@ -517,7 +517,7 @@ async function handleSubmit() {
             </button>
           </div>
 
-          <div class="grid grid-cols-4 gap-3">
+          <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
             <div
               v-for="cat in availableCategories"
               :key="cat.id"
@@ -530,8 +530,9 @@ async function handleSubmit() {
               <button
                 type="button"
                 @click="confirmDeleteCategory(cat, $event)"
-                class="absolute -top-1 -right-1 w-5 h-5 bg-expense-600 text-paper-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-soft cursor-pointer"
+                class="absolute -top-1 -right-1 w-5 h-5 bg-expense-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-soft cursor-pointer"
                 title="Hapus Kategori"
+                aria-label="Tutup dialog"
               >
                 <X class="w-3 h-3 stroke-[3]" />
               </button>
@@ -540,7 +541,7 @@ async function handleSubmit() {
                 class="w-13 h-13 rounded-full flex items-center justify-center transition-all btn-bounce mb-2"
                 :class="
                   form.category_id === cat.id
-                    ? 'bg-rose-500 text-paper-0 shadow-soft ring-2 ring-rose-300 ring-offset-2'
+                    ? 'bg-rose-500 text-white shadow-soft ring-2 ring-rose-300 ring-offset-2'
                     : 'bg-violet-100 text-violet-600 hover:bg-violet-200'
                 "
                 :style="
@@ -707,7 +708,7 @@ async function handleSubmit() {
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full h-12 bg-violet-600 text-paper-0 font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+            class="w-full h-12 bg-violet-600 text-white font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
             <span>{{
@@ -725,7 +726,12 @@ async function handleSubmit() {
     <!-- Quick Modal Tambah Kategori -->
     <div
       v-if="isAddCategoryModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isAddCategoryModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -739,6 +745,7 @@ async function handleSubmit() {
           <button
             @click="isAddCategoryModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -777,7 +784,7 @@ async function handleSubmit() {
                 class="w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer"
                 :class="
                   newCategoryForm.icon === item.id
-                    ? 'bg-violet-600 text-paper-0 shadow-soft scale-105'
+                    ? 'bg-violet-600 text-white shadow-soft scale-105'
                     : 'text-ink-600 hover:bg-paper-0'
                 "
                 :title="item.label"
@@ -804,7 +811,7 @@ async function handleSubmit() {
               >
                 <Check
                   v-if="newCategoryForm.color === color"
-                  class="w-3.5 h-3.5 text-paper-0"
+                  class="w-3.5 h-3.5 text-white"
                 />
               </button>
             </div>
@@ -821,7 +828,7 @@ async function handleSubmit() {
             <button
               type="submit"
               :disabled="isCreatingCategory"
-              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isCreatingCategory" class="w-4 h-4 animate-spin" />
               <span>Simpan</span>
@@ -834,7 +841,12 @@ async function handleSubmit() {
     <!-- Quick Modal Tambah Sumber Dana (Akun / Dompet) -->
     <div
       v-if="isAddAccountModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isAddAccountModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -848,6 +860,7 @@ async function handleSubmit() {
           <button
             @click="isAddAccountModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -917,7 +930,7 @@ async function handleSubmit() {
             <button
               type="submit"
               :disabled="isCreatingAccount"
-              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isCreatingAccount" class="w-4 h-4 animate-spin" />
               <span>Simpan Sumber Dana</span>
@@ -930,7 +943,12 @@ async function handleSubmit() {
     <!-- Modal Konfirmasi Hapus Kategori -->
     <div
       v-if="isDeleteCategoryModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDeleteCategoryModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-sm bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center animate-in fade-in zoom-in-95 duration-150"
@@ -962,7 +980,7 @@ async function handleSubmit() {
           <button
             @click="handleDeleteCategory"
             :disabled="isDeletingCategory"
-            class="py-2.5 bg-expense-600 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-expense-600 text-white font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2
               v-if="isDeletingCategory"

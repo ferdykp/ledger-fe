@@ -716,7 +716,7 @@ onUnmounted(() => {
             <span class="step-dot">2</span>
 
             <div>
-              <h2>Review hasil</h2>
+              <h2>Periksa hasil</h2>
 
               <p>Pastikan nominal dan tanggal benar.</p>
             </div>

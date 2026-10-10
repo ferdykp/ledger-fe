@@ -36,7 +36,7 @@ const {
   <div class="page-shell">
     <div class="page-heading">
       <div>
-        <span class="eyebrow">Planning</span>
+        <span class="eyebrow">Perencanaan</span>
         <h1>Tagihan & langganan</h1>
         <p>
           Simpan biaya rutin, tanggal jatuh tempo, dan status pembayaran agar
@@ -161,7 +161,7 @@ const {
         >Halaman {{ page }} dari {{ lastPage }} · Ringkasan mencakup semua
         halaman</span
       >
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button
           class="secondary-button"
           :disabled="loading || page <= 1"
@@ -180,7 +180,12 @@ const {
     </div>
     <div
       v-if="open"
-      class="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-end sm:place-items-center p-0 sm:p-4"
+      v-dialog="
+        () => {
+          open = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-black/35 backdrop-blur-sm grid place-items-end sm:place-items-center p-0 sm:p-4"
       @click="close"
     >
       <form
@@ -190,12 +195,17 @@ const {
       >
         <div class="flex justify-between items-start mb-5">
           <div>
-            <span class="eyebrow">{{ editing ? "Edit" : "New" }}</span>
+            <span class="eyebrow">{{ editing ? "Edit" : "Baru" }}</span>
             <h2 class="text-xl font-extrabold">
               {{ editing ? "Ubah tagihan" : "Tambah tagihan" }}
             </h2>
           </div>
-          <button type="button" @click="close" class="icon-button">
+          <button
+            type="button"
+            @click="close"
+            class="icon-button"
+            aria-label="Tutup dialog"
+          >
             <X class="w-4 h-4" />
           </button>
         </div>
@@ -218,7 +228,7 @@ const {
               class="w-full px-3"
               placeholder="350000"
           /></label>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label
               ><span class="field-label">Jatuh tempo</span
               ><input
@@ -248,7 +258,7 @@ const {
             ><input
               v-model="form.category"
               class="w-full px-3"
-              placeholder="Utilities, subscription…" /></label
+              placeholder="Listrik, internet, hiburan…" /></label
           ><label
             ><span class="field-label">Catatan</span
             ><textarea v-model="form.note" class="w-full p-3 min-h-24" /></label

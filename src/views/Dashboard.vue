@@ -128,7 +128,7 @@ function formatRupiahShort(value) {
 const monthlyIncome = computed(() => Number(monthlyReport.value.income));
 const monthlyExpense = computed(() => Number(monthlyReport.value.expense));
 
-// 3. Sisa Budget Bulanan — REAL, dari budget store (bukan dihitung ulang dari transaksi,
+// 3. Sisa Anggaran bulanan — REAL, dari budget store (bukan dihitung ulang dari transaksi,
 // karena totalBudgetSpent di store sudah dihitung per kategori yang di-budget-kan)
 const hasBudgetSet = computed(() => budgets.value.length > 0);
 const remainingBudget = computed(() => {
@@ -278,7 +278,11 @@ async function fetchCashFlowData() {
         <p class="bank-subtitle">Ringkasan keuanganmu hari ini.</p>
       </div>
       <div class="bank-header-actions">
-        <router-link to="/scan" class="bank-icon-action" title="Scan bukti"
+        <router-link
+          to="/scan"
+          class="bank-icon-action"
+          title="Pindai bukti"
+          aria-label="Pindai bukti"
           ><ScanLine class="w-5 h-5"
         /></router-link>
         <router-link to="/transactions/create" class="bank-primary-action"
@@ -287,6 +291,21 @@ async function fetchCashFlowData() {
       </div>
     </header>
 
+    <section
+      v-if="!accountStore.isLoading && accountStore.accounts.length === 0"
+      class="onboarding-card"
+    >
+      <div>
+        <h2>Mulai dari dompet pertama Anda</h2>
+        <p>
+          Tambahkan uang tunai, rekening, atau e-wallet beserta saldo awalnya.
+          Setelah itu, catat transaksi harian Anda.
+        </p>
+      </div>
+      <router-link to="/accounts" class="primary-button shrink-0"
+        ><Plus class="w-4 h-4" />Tambah dompet</router-link
+      >
+    </section>
     <section class="bank-hero-grid">
       <article class="bank-balance-card">
         <div class="bank-balance-top">
@@ -335,7 +354,7 @@ async function fetchCashFlowData() {
             ><span><Send /></span><b>Transfer</b></router-link
           >
           <router-link to="/scan"
-            ><span><ScanLine /></span><b>Scan Bukti</b></router-link
+            ><span><ScanLine /></span><b>Pindai bukti</b></router-link
           >
         </div>
       </article>
@@ -401,7 +420,7 @@ async function fetchCashFlowData() {
           <div class="bank-panel-head compact">
             <div>
               <span class="bank-section-kicker">PERENCANAAN</span>
-              <h2>Budget Bulanan</h2>
+              <h2>Anggaran bulanan</h2>
             </div>
             <Wallet />
           </div>
@@ -422,8 +441,10 @@ async function fetchCashFlowData() {
             </div>
           </template>
           <div v-else class="bank-empty-compact">
-            <p>Belum ada budget untuk bulan ini.</p>
-            <router-link to="/budget">Atur budget <ChevronRight /></router-link>
+            <p>Belum ada anggaran untuk bulan ini.</p>
+            <router-link to="/budget"
+              >Atur anggaran <ChevronRight
+            /></router-link>
           </div>
         </article>
 
@@ -431,7 +452,7 @@ async function fetchCashFlowData() {
           <div class="bank-panel-head compact">
             <div>
               <span class="bank-section-kicker">TARGET</span>
-              <h2>Goal Utama</h2>
+              <h2>Target utama</h2>
             </div>
             <Target />
           </div>
@@ -454,7 +475,7 @@ async function fetchCashFlowData() {
           ></template>
           <div v-else class="bank-empty-compact">
             <p>Belum ada target tabungan.</p>
-            <router-link to="/goals">Buat goal <ChevronRight /></router-link>
+            <router-link to="/goals">Buat target <ChevronRight /></router-link>
           </div>
         </article>
       </aside>

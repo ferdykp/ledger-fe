@@ -32,11 +32,11 @@ function dismiss() {
 <template>
   <div
     v-if="showPrompt"
-    class="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 z-50 max-w-sm bg-ink-900 text-paper-0 p-4 rounded-md shadow-violet border border-line-200/20 flex items-center justify-between gap-3 animate-bounce-in"
+    class="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 z-50 max-w-sm bg-ink-900 text-white p-4 rounded-md shadow-violet border border-line-200/20 flex items-center justify-between gap-3 animate-bounce-in"
   >
     <div class="flex items-center gap-3">
       <div
-        class="w-9 h-9 rounded-md bg-violet-600 text-paper-0 flex items-center justify-center font-bold shrink-0"
+        class="w-9 h-9 rounded-md bg-violet-600 text-white flex items-center justify-center font-bold shrink-0"
       >
         L
       </div>
@@ -51,12 +51,12 @@ function dismiss() {
     <div class="flex items-center gap-1 shrink-0">
       <button
         @click="installPwa"
-        class="px-3 py-1.5 bg-violet-600 hover:bg-violet-600/90 text-paper-0 font-semibold text-xs rounded-sm transition-colors flex items-center gap-1"
+        class="px-3 py-1.5 bg-violet-600 hover:bg-violet-600/90 text-white font-semibold text-xs rounded-sm transition-colors flex items-center gap-1"
       >
         <Download class="w-3.5 h-3.5" />
         <span>Install</span>
       </button>
-      <button @click="dismiss" class="p-1 text-ink-300 hover:text-paper-0">
+      <button @click="dismiss" class="p-1 text-ink-300 hover:text-white">
         <X class="w-4 h-4" />
       </button>
     </div>

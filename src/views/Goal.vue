@@ -226,7 +226,7 @@ async function handleDeleteGoal() {
     >
       <div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Financial Goals
+          Target tabungan
         </h1>
         <p class="text-ink-600 text-sm mt-1">
           Lacak dan wujudkan impian finansialmu.
@@ -236,7 +236,7 @@ async function handleDeleteGoal() {
       <button
         type="button"
         @click="openCreateModal()"
-        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-paper-0 rounded-2xl font-bold text-sm shadow-violet btn-bounce cursor-pointer self-start sm:self-auto"
+        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-white rounded-2xl font-bold text-sm shadow-violet btn-bounce cursor-pointer self-start sm:self-auto"
       >
         <Plus class="w-4 h-4 stroke-[2.5]" />
         <span>Buat Goal Baru</span>
@@ -467,7 +467,7 @@ async function handleDeleteGoal() {
           class="lg:col-span-4 h-full min-h-[200px] border-2 border-dashed border-line-300 hover:border-violet-600 bg-violet-50/20 hover:bg-violet-50/50 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group btn-bounce"
         >
           <div
-            class="w-12 h-12 rounded-full bg-paper-0 border border-line-200 group-hover:border-violet-200 group-hover:bg-violet-600 group-hover:text-paper-0 flex items-center justify-center text-ink-600 shadow-soft transition-all"
+            class="w-12 h-12 rounded-full bg-paper-0 border border-line-200 group-hover:border-violet-200 group-hover:bg-violet-600 group-hover:text-white flex items-center justify-center text-ink-600 shadow-soft transition-all"
           >
             <Plus class="w-5 h-5 stroke-[2.5]" />
           </div>
@@ -488,7 +488,12 @@ async function handleDeleteGoal() {
     <!-- Modal Buat / Edit Target -->
     <div
       v-if="isCreateModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isCreateModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -502,6 +507,7 @@ async function handleDeleteGoal() {
           <button
             @click="isCreateModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -570,7 +576,7 @@ async function handleDeleteGoal() {
                 class="p-2.5 rounded-xl border flex items-center justify-center shrink-0 cursor-pointer transition-all"
                 :class="
                   goalForm.icon === item.id
-                    ? 'bg-violet-600 text-paper-0 border-violet-600'
+                    ? 'bg-violet-600 text-white border-violet-600'
                     : 'bg-paper-0 border-line-200 text-ink-600'
                 "
               >
@@ -590,7 +596,7 @@ async function handleDeleteGoal() {
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
               <span>Simpan Target</span>
@@ -603,7 +609,12 @@ async function handleDeleteGoal() {
     <!-- Modal Setor Tabungan (Nabung) -->
     <div
       v-if="isDepositModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDepositModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-150"
@@ -617,6 +628,7 @@ async function handleDeleteGoal() {
           <button
             @click="isDepositModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -667,7 +679,7 @@ async function handleDeleteGoal() {
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="flex-1 h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
               <span>Simpan Setoran</span>
@@ -680,7 +692,12 @@ async function handleDeleteGoal() {
     <!-- Modal Konfirmasi Hapus Target -->
     <div
       v-if="isDeleteModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDeleteModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-sm bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center animate-in fade-in zoom-in-95 duration-150"
@@ -710,7 +727,7 @@ async function handleDeleteGoal() {
           <button
             @click="handleDeleteGoal"
             :disabled="isSubmitting"
-            class="py-2.5 bg-expense-600 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-expense-600 text-white font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ isSubmitting ? "Menghapus..." : "Ya, Hapus" }}</span>

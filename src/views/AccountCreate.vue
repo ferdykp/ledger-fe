@@ -124,6 +124,7 @@ async function handleSubmit() {
           type="button"
           @click="handleClose"
           class="p-1 text-ink-600 hover:text-ink-900 rounded-full hover:bg-base-50 transition-colors cursor-pointer"
+          aria-label="Tutup dialog"
         >
           <X class="w-5 h-5" />
         </button>
@@ -210,7 +211,7 @@ async function handleSubmit() {
               class="w-9 h-9 rounded-full flex items-center justify-center transition-transform cursor-pointer btn-bounce"
               :style="{ backgroundColor: color }"
             >
-              <Check v-if="form.color === color" class="w-5 h-5 text-paper-0" />
+              <Check v-if="form.color === color" class="w-5 h-5 text-white" />
             </button>
 
             <!-- Custom Color Picker Input -->
@@ -232,7 +233,7 @@ async function handleSubmit() {
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full h-12 bg-violet-600 text-paper-0 font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+            class="w-full h-12 bg-violet-600 text-white font-bold text-sm rounded-2xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Loader2 v-if="isLoading" class="w-5 h-5 animate-spin" />
             <span>{{ isLoading ? "Menyimpan..." : "Simpan Sumber Dana" }}</span>

@@ -244,7 +244,7 @@ async function handleDelete() {
     >
       <div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Riwayat Transaksi
+          Transaksi
         </h1>
         <p class="text-ink-600 text-sm mt-1">
           Kelola dan pantau semua aktivitas keuangan Anda.
@@ -253,7 +253,7 @@ async function handleDelete() {
 
       <router-link
         to="/transactions/create"
-        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-paper-0 rounded-2xl font-bold text-sm shadow-violet btn-bounce self-start sm:self-auto"
+        class="inline-flex items-center justify-center gap-2 px-5 py-3 bg-violet-600 text-white rounded-2xl font-bold text-sm shadow-violet btn-bounce self-start sm:self-auto"
       >
         <Plus class="w-4 h-4 stroke-[2.5]" />
         <span>Tambah Transaksi</span>
@@ -346,6 +346,7 @@ async function handleDelete() {
           v-if="searchQuery"
           @click="searchQuery = ''"
           class="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-900 cursor-pointer"
+          aria-label="Tutup dialog"
         >
           <X class="w-3.5 h-3.5" />
         </button>
@@ -401,15 +402,15 @@ async function handleDelete() {
             <div
               v-for="tx in group.transactions"
               :key="tx.id"
-              class="bg-paper-0 border border-line-200/80 rounded-2xl p-4 shadow-soft hover:shadow-card transition-all flex items-center justify-between group"
+              class="transaction-row bg-paper-0 border border-line-200/80 rounded-2xl p-4 shadow-soft hover:shadow-card transition-all group"
             >
-              <div class="flex items-center gap-3.5">
+              <div class="transaction-summary flex items-center gap-3.5">
                 <div
                   class="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-soft"
                   :class="
                     tx.type === 'income'
-                      ? 'bg-violet-600 text-paper-0'
-                      : 'bg-rose-500 text-paper-0'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-rose-500 text-white'
                   "
                 >
                   <component
@@ -431,7 +432,7 @@ async function handleDelete() {
                 </div>
               </div>
 
-              <div class="flex items-center gap-3">
+              <div class="transaction-details">
                 <div
                   class="font-mono-money font-bold text-sm sm:text-base text-right"
                   :class="
@@ -442,14 +443,13 @@ async function handleDelete() {
                   {{ formatRupiah(tx.amount) }}
                 </div>
 
-                <div
-                  class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                >
+                <div class="transaction-actions">
                   <router-link
                     :to="`/transactions/${tx.id}/edit`"
                     @click.stop
                     class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50"
                     title="Edit transaksi"
+                    aria-label="Edit transaksi"
                   >
                     <Pencil class="w-4 h-4" />
                   </router-link>
@@ -458,6 +458,7 @@ async function handleDelete() {
                     @click.stop="duplicateTransaction(tx)"
                     class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50"
                     title="Duplikat transaksi"
+                    aria-label="Duplikat transaksi"
                   >
                     <Copy class="w-4 h-4" />
                   </button>
@@ -466,6 +467,7 @@ async function handleDelete() {
                     @click.stop="openDeleteModal(tx)"
                     class="p-1.5 text-ink-400 hover:text-rose-500 rounded-lg hover:bg-rose-50"
                     title="Hapus transaksi"
+                    aria-label="Hapus transaksi"
                   >
                     <Trash2 class="w-4 h-4" />
                   </button>
@@ -480,7 +482,12 @@ async function handleDelete() {
     <!-- MODAL KONFIRMASI HAPUS TRANSAKSI (Bersih dari modifier @click.stop.prevent) -->
     <div
       v-if="isDeleteModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDeleteModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-sm bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center animate-in fade-in zoom-in-95 duration-150"
@@ -519,7 +526,7 @@ async function handleDelete() {
             type="button"
             @click="handleDelete"
             :disabled="isDeleting"
-            class="py-2.5 bg-rose-500 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-rose-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-rose-500 text-white font-semibold text-xs rounded-xl shadow-soft hover:bg-rose-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ isDeleting ? "Menghapus..." : "Ya, Hapus" }}</span>

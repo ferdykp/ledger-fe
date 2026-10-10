@@ -5,6 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 export default defineConfig({
+  server: { proxy: { "/api": "http://127.0.0.1:8000" } },
   build: {
     rolldownOptions: {
       output: {
@@ -41,8 +42,8 @@ export default defineConfig({
         short_name: "Ledger",
         description:
           "Kelola transaksi, budget, goals, tagihan, dan bukti pembayaran dalam satu tempat.",
-        theme_color: "#635BFF",
-        background_color: "#F6F7FB",
+        theme_color: "#08796d",
+        background_color: "#f3f6f3",
         display: "standalone",
         orientation: "any",
         start_url: "/",

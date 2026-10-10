@@ -348,10 +348,14 @@ async function handleLogout() {
       </h1>
 
       <p class="text-ink-600 text-sm mt-1">
-        Yuk, atur profilmu biar makin personal.
+        Kelola profil, keamanan, dan preferensi akun Anda.
       </p>
     </div>
 
+    <nav class="settings-shortcuts" aria-label="Bagian pengaturan">
+      <a href="#profile">Profil</a><a href="#security">Keamanan &amp; data</a
+      ><a href="#preferences">Preferensi</a>
+    </nav>
     <!-- =========================================================
          MAIN GRID
     ========================================================== -->
@@ -365,7 +369,8 @@ async function handleLogout() {
         <!-- ================= PROFILE ================= -->
 
         <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-6"
+          id="profile"
+          class="settings-section bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-6"
         >
           <h2 class="font-display font-bold text-base text-ink-900">Profil</h2>
 
@@ -398,7 +403,7 @@ async function handleLogout() {
               <button
                 type="button"
                 @click="triggerAvatarSelect"
-                class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-violet-600 text-paper-0 flex items-center justify-center shadow-soft hover:bg-violet-700 transition-all cursor-pointer btn-bounce"
+                class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-soft hover:bg-violet-700 transition-all cursor-pointer btn-bounce"
                 title="Ubah Foto Avatar"
               >
                 <Pencil class="w-4 h-4" />
@@ -444,7 +449,7 @@ async function handleLogout() {
             <button
               type="submit"
               :disabled="isSavingProfile"
-              class="w-full h-11 bg-violet-600 text-paper-0 font-bold text-xs rounded-xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              class="w-full h-11 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-violet btn-bounce cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Loader2 v-if="isSavingProfile" class="w-4 h-4 animate-spin" />
 
@@ -456,7 +461,8 @@ async function handleLogout() {
         <!-- ================= SECURITY ================= -->
 
         <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-5"
+          id="security"
+          class="settings-section bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-5"
         >
           <div class="flex items-center justify-between">
             <h2 class="font-display font-bold text-base text-ink-900">
@@ -562,7 +568,7 @@ async function handleLogout() {
                 type="button"
                 :disabled="exporting"
                 @click="handleExport('csv')"
-                class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
+                class="py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileSpreadsheet class="w-4 h-4" />
 
@@ -573,7 +579,7 @@ async function handleLogout() {
                 type="button"
                 :disabled="exporting"
                 @click="handleExport('pdf')"
-                class="py-2.5 bg-rose-500 hover:bg-rose-600 text-paper-0 font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
+                class="py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow-soft flex items-center justify-center gap-2 cursor-pointer transition-colors btn-bounce"
               >
                 <FileText class="w-4 h-4" />
 
@@ -609,7 +615,8 @@ async function handleLogout() {
         <!-- ================= PREFERENCES ================= -->
 
         <div
-          class="bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-5"
+          id="preferences"
+          class="settings-section bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-soft space-y-5"
         >
           <h2 class="font-display font-bold text-base text-ink-900">
             Preferensi
@@ -669,7 +676,7 @@ async function handleLogout() {
           <!-- Theme -->
 
           <div
-            class="bg-violet-50/60 border border-violet-100 rounded-2xl p-4 flex items-center justify-between gap-4"
+            class="theme-picker bg-violet-50/60 border border-violet-100 rounded-2xl p-4 flex items-center justify-between gap-4"
           >
             <div class="flex items-center gap-3 min-w-0">
               <div
@@ -713,7 +720,7 @@ async function handleLogout() {
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
                 :class="
                   theme === 'dark'
-                    ? 'bg-violet-600 text-paper-0 shadow-violet'
+                    ? 'bg-violet-600 text-white shadow-violet'
                     : 'text-ink-400 hover:text-ink-900'
                 "
               >
@@ -807,7 +814,7 @@ async function handleLogout() {
 
             <router-link
               to="/categories"
-              class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-violet-600 text-paper-0 rounded-xl font-bold text-xs shadow-violet btn-bounce cursor-pointer shrink-0"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-violet-600 text-white rounded-xl font-bold text-xs shadow-violet btn-bounce cursor-pointer shrink-0"
             >
               <Plus class="w-3.5 h-3.5 stroke-[2.5]" />
 

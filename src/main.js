@@ -1,4 +1,6 @@
 import "./style.css";
+import "./design.css";
+import dialog from "./directives/dialog";
 
 import { createApp } from "vue";
 import { createPinia } from "pinia";
@@ -12,6 +14,7 @@ import { registerSW } from "virtual:pwa-register";
 registerSW({ immediate: true, updateViaCache: "none" });
 
 const app = createApp(App);
+app.directive("dialog", dialog);
 
 const pinia = createPinia();
 pinia.use(({ store }) => {

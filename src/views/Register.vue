@@ -1,9 +1,9 @@
 <!-- ledger-web/src/views/Register.vue -->
 <script setup>
+import AuthLayout from "@/components/AuthLayout.vue";
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import logoImg from "@/assets/ledger-icon.png";
 import {
   User,
   Mail,
@@ -75,33 +75,15 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-base-50 flex items-center justify-center p-4 text-ink-900 font-body"
-  >
-    <div
-      class="w-full max-w-md bg-paper-0 border border-line-200 rounded-md p-6 md:p-8 shadow-soft space-y-6"
-    >
+  <AuthLayout>
+    <div class="space-y-6">
       <!-- Header v2.0 -->
       <div class="space-y-3 text-center">
-        <div class="flex items-center justify-center">
-          <div class="flex items-center gap-4 rounded-md p-2">
-            <!-- Gambar/Ikon Logo (Diperbesar dari 8 ke 12) -->
-            <img
-              :src="logoImg"
-              alt="Ledger Logo"
-              class="w-16 h-16 object-contain"
-            />
-            <!-- Teks Nama Aplikasi (Diperbesar dari xl ke 3xl) -->
-            <span class="text-3xl font-semibold text-ink-900 tracking-tight"
-              >Ledger</span
-            >
-          </div>
-        </div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Yuk, Mulai Atur Uangmu
+          Mulai dengan langkah sederhana
         </h1>
         <p class="text-ink-600 text-sm font-medium">
-          Buat akun untuk perjalanan finansial yang lebih baik
+          Buat akun, tambahkan dompet, lalu catat transaksi pertama Anda.
         </p>
       </div>
 
@@ -127,10 +109,11 @@ async function handleSubmit() {
             />
             <input
               id="name"
+              autocomplete="name"
               v-model="form.name"
               type="text"
               required
-              placeholder="John Doe"
+              placeholder="Nama Anda"
               :class="errors.name ? 'border-expense-600' : 'border-line-200'"
               class="w-full pl-9 pr-3 h-10 border rounded-sm bg-base-50 focus:bg-paper-0 focus:border-violet-600 focus:outline-none text-sm text-ink-900 transition-colors placeholder:text-ink-300"
             />
@@ -154,6 +137,7 @@ async function handleSubmit() {
             />
             <input
               id="email"
+              autocomplete="email"
               v-model="form.email"
               type="email"
               required
@@ -170,10 +154,10 @@ async function handleSubmit() {
           </p>
         </div>
 
-        <!-- Field Password -->
+        <!-- Field kata sandi -->
         <div class="space-y-1">
           <label for="password" class="block text-xs font-semibold text-ink-600"
-            >Password</label
+            >Kata sandi</label
           >
           <div class="relative flex items-center">
             <Lock
@@ -181,6 +165,7 @@ async function handleSubmit() {
             />
             <input
               id="password"
+              autocomplete="new-password"
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
               required
@@ -193,6 +178,9 @@ async function handleSubmit() {
             <button
               type="button"
               @click="showPassword = !showPassword"
+              :aria-label="
+                showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'
+              "
               class="absolute right-3 text-ink-600 hover:text-ink-900 focus:outline-none cursor-pointer"
             >
               <EyeOff v-if="showPassword" class="w-4 h-4" />
@@ -226,13 +214,13 @@ async function handleSubmit() {
           </p>
         </div>
 
-        <!-- Field Confirm Password -->
+        <!-- Field Confirm kata sandi -->
         <div class="space-y-1">
           <label
             for="password_confirmation"
             class="block text-xs font-semibold text-ink-600"
           >
-            Konfirmasi Password
+            Konfirmasi kata sandi
           </label>
           <div class="relative flex items-center">
             <Lock
@@ -240,6 +228,7 @@ async function handleSubmit() {
             />
             <input
               id="password_confirmation"
+              autocomplete="new-password"
               v-model="form.password_confirmation"
               :type="showPasswordConfirm ? 'text' : 'password'"
               required
@@ -254,6 +243,11 @@ async function handleSubmit() {
             <button
               type="button"
               @click="showPasswordConfirm = !showPasswordConfirm"
+              :aria-label="
+                showPasswordConfirm
+                  ? 'Sembunyikan kata sandi'
+                  : 'Tampilkan kata sandi'
+              "
               class="absolute right-3 text-ink-600 hover:text-ink-900 focus:outline-none cursor-pointer"
             >
               <EyeOff v-if="showPasswordConfirm" class="w-4 h-4" />
@@ -261,19 +255,19 @@ async function handleSubmit() {
             </button>
           </div>
 
-          <!-- Realtime Indicator: Match Password -->
+          <!-- Realtime Indicator: Match kata sandi -->
           <div
             v-if="form.password_confirmation"
             class="flex items-center gap-1.5 pt-1 text-xs"
           >
             <template v-if="isPasswordMatch">
               <CheckCircle2 class="w-3.5 h-3.5 text-income-600 shrink-0" />
-              <span class="text-income-600 font-medium">Password cocok</span>
+              <span class="text-income-600 font-medium">Kata sandi cocok</span>
             </template>
             <template v-else>
               <XCircle class="w-3.5 h-3.5 text-expense-600 shrink-0" />
               <span class="text-expense-600 font-medium"
-                >Password belum cocok</span
+                >Kata sandi belum cocok</span
               >
             </template>
           </div>
@@ -283,7 +277,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading || !isFormValid"
-          class="w-full h-11 bg-violet-600 text-paper-0 font-semibold text-sm rounded-md shadow-violet btn-bounce disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center mt-2"
+          class="w-full h-11 bg-violet-600 text-white font-semibold text-sm rounded-md shadow-violet btn-bounce disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center mt-2"
         >
           <span v-if="!isLoading">Daftar Akun</span>
           <span v-else class="text-xs">Memproses...</span>
@@ -303,5 +297,5 @@ async function handleSubmit() {
         </router-link>
       </div>
     </div>
-  </div>
+  </AuthLayout>
 </template>

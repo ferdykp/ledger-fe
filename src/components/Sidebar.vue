@@ -1,8 +1,8 @@
 <script setup>
-import { ref } from "vue";
-import { storeToRefs } from "pinia";
+import { ref, watch, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useRoute } from "vue-router";
+import BrandMark from "@/components/BrandMark.vue";
 import {
   LayoutDashboard,
   Wallet,
@@ -11,8 +11,6 @@ import {
   BarChart3,
   History,
   Settings,
-  LogOut,
-  User,
   Plus,
   ScanLine,
   Menu,
@@ -20,208 +18,169 @@ import {
   ReceiptText,
   Tags,
   ChevronRight,
-  Bell,
+  MessageCircle,
 } from "lucide-vue-next";
-import logoImg from "../assets/ledger-icon.png";
-const auth = useAuthStore(),
-  { user } = storeToRefs(auth),
-  route = useRoute(),
-  more = ref(false);
+const auth = useAuthStore();
+const route = useRoute();
+const more = ref(false);
 const sections = [
   {
-    label: "Overview",
-    items: [{ name: "Dashboard", path: "/dashboard", icon: LayoutDashboard }],
-  },
-  {
-    label: "Money",
+    label: "Keuangan",
     items: [
+      { name: "Beranda", path: "/dashboard", icon: LayoutDashboard },
       { name: "Transaksi", path: "/transactions", icon: History },
-      { name: "Akun & Dompet", path: "/accounts", icon: Wallet },
-      { name: "Scan Bukti", path: "/scan", icon: ScanLine },
+      { name: "Dompet", path: "/accounts", icon: Wallet },
+      { name: "Laporan", path: "/report", icon: BarChart3 },
     ],
   },
   {
-    label: "Planning",
+    label: "Perencanaan",
     items: [
-      { name: "Budget", path: "/budget", icon: PiggyBank },
-      { name: "Goals", path: "/goals", icon: Target },
+      { name: "Anggaran", path: "/budget", icon: PiggyBank },
+      { name: "Target tabungan", path: "/goals", icon: Target },
       { name: "Tagihan", path: "/bills", icon: ReceiptText },
     ],
   },
   {
-    label: "Insights",
-    items: [{ name: "Laporan", path: "/report", icon: BarChart3 }],
-  },
-  {
-    label: "System",
+    label: "Alat & pengaturan",
     items: [
+      { name: "Pindai bukti", path: "/scan", icon: ScanLine },
+      { name: "WhatsApp", path: "/settings/whatsapp", icon: MessageCircle },
       { name: "Kategori", path: "/categories", icon: Tags },
       { name: "Pengaturan", path: "/settings", icon: Settings },
     ],
   },
 ];
-const mobile = [
-  { name: "Beranda", path: "/dashboard", icon: LayoutDashboard },
-  { name: "Transaksi", path: "/transactions", icon: History },
-  { name: "Akun", path: "/accounts", icon: Wallet },
-];
-const active = (p) => route.path === p || route.path.startsWith(p + "/");
+const active = (path) =>
+  path === "/settings"
+    ? route.path === path
+    : route.path === path || route.path.startsWith(path + "/");
+const mobile = sections[0].items;
+const inMore = computed(() =>
+  sections.slice(1).some((s) => s.items.some((i) => active(i.path))),
+);
+watch(
+  () => route.path,
+  () => {
+    more.value = false;
+  },
+);
 </script>
 <template>
-  <header
-    class="ledger-mobile-header lg:hidden fixed top-0 inset-x-0 z-40 bg-paper-0/90 backdrop-blur-xl border-b border-line-200 px-4 flex items-center justify-between"
-  >
-    <div class="flex items-center gap-2">
-      <img :src="logoImg" class="w-8 h-8 object-contain" /><b
-        class="tracking-[-.04em] text-lg"
-        >Ledger</b
-      >
-    </div>
-    <div class="flex gap-2">
-      <router-link to="/scan" class="icon-button"
-        ><ScanLine class="w-4 h-4" /></router-link
-      ><button class="icon-button"><Bell class="w-4 h-4" /></button>
-    </div>
+  <header class="ledger-mobile-header lg:hidden">
+    <router-link
+      to="/dashboard"
+      class="brand-lockup"
+      aria-label="Ledger, beranda"
+      ><BrandMark /><span>Ledger</span></router-link
+    >
+    <router-link
+      to="/scan"
+      class="icon-button"
+      aria-label="Pindai bukti transaksi"
+      ><ScanLine class="w-5 h-5"
+    /></router-link>
   </header>
-  <aside
-    class="hidden lg:flex w-[270px] h-screen sticky top-0 shrink-0 bg-paper-0 border-r border-line-200 p-4 flex-col"
-  >
-    <div class="h-16 flex items-center gap-3 px-3">
-      <div
-        class="w-10 h-10 rounded-[14px] bg-primary-100 grid place-items-center"
-      >
-        <img :src="logoImg" class="w-7 h-7 object-contain" />
-      </div>
-      <div>
-        <b class="text-lg tracking-[-.045em]">Ledger</b
-        ><span class="block text-[10px] text-ink-400 font-semibold"
-          >Personal Finance</span
-        >
-      </div>
-    </div>
-    <nav class="flex-1 overflow-y-auto py-3 no-scrollbar space-y-5">
-      <section v-for="s in sections" :key="s.label">
-        <p
-          class="px-3 mb-1.5 text-[10px] uppercase tracking-[.14em] text-ink-400 font-bold"
-        >
-          {{ s.label }}
-        </p>
+  <aside class="ledger-sidebar hidden lg:flex">
+    <router-link to="/dashboard" class="brand-lockup"
+      ><BrandMark /><span
+        >Ledger<span class="brand-caption">Keuangan pribadi</span></span
+      ></router-link
+    >
+    <router-link to="/transactions/create" class="primary-button sidebar-create"
+      ><Plus class="w-4 h-4" />Catat transaksi</router-link
+    >
+    <nav class="sidebar-navigation" aria-label="Navigasi utama">
+      <section v-for="section in sections" :key="section.label">
+        <p class="nav-section-label">{{ section.label }}</p>
         <router-link
-          v-for="i in s.items"
-          :key="i.path"
-          :to="i.path"
-          class="h-10 px-3 rounded-xl flex items-center gap-3 text-[13px] font-semibold transition"
-          :class="
-            active(i.path)
-              ? 'bg-primary-100 text-primary-700'
-              : 'text-ink-600 hover:bg-base-50 hover:text-ink-900'
-          "
-          ><component :is="i.icon" class="w-[17px] h-[17px]" /><span>{{
-            i.name
-          }}</span></router-link
-        >
+          v-for="item in section.items"
+          :key="item.path"
+          :to="item.path"
+          class="nav-item"
+          :class="{ 'is-active': active(item.path) }"
+          :aria-current="active(item.path) ? 'page' : undefined"
+          ><component :is="item.icon" /><span>{{ item.name }}</span
+          ><span v-if="active(item.path)" class="nav-active-dot"
+        /></router-link>
       </section>
     </nav>
-    <div class="pt-3 border-t border-line-200">
-      <router-link
-        to="/settings"
-        class="flex items-center gap-3 p-2 rounded-xl hover:bg-base-50"
-        ><div
-          class="w-9 h-9 rounded-xl bg-primary-100 text-primary-700 grid place-items-center"
-        >
-          <User class="w-4 h-4" />
-        </div>
-        <div class="min-w-0 flex-1">
-          <b class="block text-xs truncate">{{ user?.name || "User" }}</b
-          ><span class="block text-[10px] text-ink-400 truncate">{{
-            user?.email
-          }}</span>
-        </div>
-        <ChevronRight class="w-4 h-4 text-ink-300" /></router-link
-      ><button
-        @click="auth.logout()"
-        class="mt-1 w-full h-9 px-3 rounded-xl flex items-center gap-2 text-xs font-semibold text-expense-600 hover:bg-expense-100"
-      >
-        <LogOut class="w-4 h-4" />Keluar
-      </button>
-    </div>
+    <router-link to="/settings" class="sidebar-profile"
+      ><span class="profile-initial">{{
+        (auth.user?.name || "A").charAt(0).toUpperCase()
+      }}</span
+      ><span class="min-w-0 flex-1"
+        ><strong>{{ auth.user?.name || "Akun Anda" }}</strong
+        ><small>Kelola akun</small></span
+      ><ChevronRight class="w-4 h-4"
+    /></router-link>
   </aside>
-  <nav
-    class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-paper-0/94 backdrop-blur-xl border-t border-line-200 px-2 pt-2 pb-safe flex items-end"
-  >
+  <nav class="mobile-navigation lg:hidden" aria-label="Navigasi utama ponsel">
     <router-link
-      v-for="i in mobile.slice(0, 2)"
-      :key="i.path"
-      :to="i.path"
-      class="flex-1 flex flex-col items-center gap-1 py-1.5 text-[10px] font-semibold"
-      :class="active(i.path) ? 'text-primary-600' : 'text-ink-400'"
-      ><component :is="i.icon" class="w-5 h-5" />{{ i.name }}</router-link
+      v-for="item in mobile.slice(0, 2)"
+      :key="item.path"
+      :to="item.path"
+      :class="{ 'is-active': active(item.path) }"
+      :aria-current="active(item.path) ? 'page' : undefined"
+      ><component :is="item.icon" /><span>{{ item.name }}</span></router-link
     >
-    <div class="flex-1 flex justify-center">
-      <router-link
-        to="/transactions/create"
-        aria-label="Tambah transaksi"
-        class="-mt-7 w-14 h-14 rounded-[18px] bg-primary-600 text-white grid place-items-center shadow-violet border-[5px] border-paper-0"
-        ><Plus class="w-6 h-6"
-      /></router-link>
-    </div>
     <router-link
-      :to="mobile[2].path"
-      class="flex-1 flex flex-col items-center gap-1 py-1.5 text-[10px] font-semibold"
-      :class="active(mobile[2].path) ? 'text-primary-600' : 'text-ink-400'"
-      ><Wallet class="w-5 h-5" />Akun</router-link
+      to="/transactions/create"
+      class="mobile-create"
+      aria-label="Catat transaksi baru"
+      ><span class="mobile-create-icon"><Plus /></span
+      ><span>Catat</span></router-link
+    >
+    <router-link
+      to="/report"
+      :class="{ 'is-active': active('/report') }"
+      :aria-current="active('/report') ? 'page' : undefined"
+      ><BarChart3 /><span>Laporan</span></router-link
     >
     <button
       @click="more = true"
-      class="flex-1 flex flex-col items-center gap-1 py-1.5 text-[10px] font-semibold text-ink-400"
+      :class="{ 'is-active': inMore || active('/accounts') }"
+      :aria-expanded="more"
+      aria-controls="mobile-menu"
     >
-      <Menu class="w-5 h-5" />Lainnya
+      <Menu /><span>Menu</span>
     </button>
   </nav>
   <div
     v-if="more"
-    class="sheet-backdrop lg:hidden fixed inset-0 z-50 bg-black/35 backdrop-blur-sm flex items-end"
-    @click="more = false"
+    v-dialog="() => (more = false)"
+    class="dialog-backdrop menu-backdrop lg:hidden"
+    @click.self="more = false"
   >
-    <div
-      class="sheet-panel w-full max-h-[82vh] overflow-auto bg-paper-0 rounded-t-[28px] p-5 pb-safe"
-      @click.stop
-    >
-      <div class="flex items-center justify-between mb-4">
+    <section id="mobile-menu" class="menu-panel">
+      <div class="flex items-center justify-between mb-5">
         <div>
-          <b class="text-lg">Menu Ledger</b>
-          <p class="text-xs text-ink-500">Semua fitur keuanganmu</p>
+          <h2>Semua menu</h2>
+          <p class="text-sm text-ink-500 mt-1">Temukan yang Anda butuhkan.</p>
         </div>
-        <button @click="more = false" class="icon-button">
-          <X class="w-4 h-4" />
+        <button
+          @click="more = false"
+          class="icon-button"
+          aria-label="Tutup menu"
+        >
+          <X class="w-5 h-5" />
         </button>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <template v-for="s in sections" :key="s.label"
-          ><router-link
-            v-for="i in s.items.filter(
-              (x) =>
-                !['/dashboard', '/transactions', '/accounts'].includes(x.path),
-            )"
-            :key="i.path"
-            :to="i.path"
-            @click="more = false"
-            class="p-3.5 border border-line-200 rounded-2xl bg-base-50 flex gap-3 items-center"
-            ><div
-              class="w-9 h-9 rounded-xl bg-paper-0 grid place-items-center text-primary-600"
-            >
-              <component :is="i.icon" class="w-4 h-4" />
-            </div>
-            <span class="text-xs font-bold">{{ i.name }}</span></router-link
-          ></template
-        >
-      </div>
-      <button
-        @click="auth.logout()"
-        class="mt-4 w-full secondary-button text-expense-600"
-      >
-        <LogOut class="w-4 h-4" />Keluar
-      </button>
-    </div>
+      <section v-for="section in sections" :key="section.label" class="mb-5">
+        <p class="nav-section-label">{{ section.label }}</p>
+        <div class="grid grid-cols-2 gap-2">
+          <router-link
+            v-for="item in section.items"
+            :key="item.path"
+            :to="item.path"
+            class="menu-tile"
+            :class="{ 'is-active': active(item.path) }"
+            ><component :is="item.icon" /><span>{{
+              item.name
+            }}</span></router-link
+          >
+        </div>
+      </section>
+    </section>
   </div>
 </template>

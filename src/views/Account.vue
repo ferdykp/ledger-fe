@@ -150,7 +150,7 @@ async function handleDelete() {
     >
       <div>
         <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
-          Daftar Akun
+          Dompet
         </h1>
         <p class="text-ink-600 text-sm mt-1">
           Kelola semua dompet dan rekening bank Anda dalam satu tempat.
@@ -303,7 +303,7 @@ async function handleDelete() {
           class="h-44 border-2 border-dashed border-line-300 hover:border-violet-600 bg-base-50/50 hover:bg-violet-50/30 rounded-3xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:-translate-y-1 cursor-pointer group btn-bounce"
         >
           <div
-            class="w-12 h-12 rounded-full bg-paper-0 border border-line-200 group-hover:border-violet-200 group-hover:bg-violet-600 group-hover:text-paper-0 flex items-center justify-center text-ink-600 shadow-soft transition-all duration-300"
+            class="w-12 h-12 rounded-full bg-paper-0 border border-line-200 group-hover:border-violet-200 group-hover:bg-violet-600 group-hover:text-white flex items-center justify-center text-ink-600 shadow-soft transition-all duration-300"
           >
             <Plus class="w-5 h-5 stroke-[2.5]" />
           </div>
@@ -319,7 +319,12 @@ async function handleDelete() {
     <!-- Modal Form Tambah Akun Baru -->
     <div
       v-if="isCreateModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isCreateModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div class="w-full max-w-lg">
         <AccountCreateModal
@@ -335,7 +340,12 @@ async function handleDelete() {
     <!-- Modal Form Edit Akun -->
     <div
       v-if="isEditModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isEditModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-lg bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
@@ -347,6 +357,7 @@ async function handleDelete() {
           <button
             @click="isEditModalOpen = false"
             class="p-1 text-ink-600 hover:text-ink-900 rounded-full hover:bg-base-50 cursor-pointer"
+            aria-label="Tutup dialog"
           >
             <X class="w-5 h-5" />
           </button>
@@ -395,7 +406,7 @@ async function handleDelete() {
               >
                 <Check
                   v-if="editForm.color === color"
-                  class="w-4 h-4 text-paper-0"
+                  class="w-4 h-4 text-white"
                 />
               </button>
             </div>
@@ -412,7 +423,7 @@ async function handleDelete() {
             <button
               type="submit"
               :disabled="isUpdating"
-              class="flex-1 h-12 bg-violet-600 text-paper-0 font-bold text-sm rounded-2xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              class="flex-1 h-12 bg-violet-600 text-white font-bold text-sm rounded-2xl shadow-violet flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Loader2 v-if="isUpdating" class="w-4 h-4 animate-spin" />
               <span>Simpan Perubahan</span>
@@ -425,7 +436,12 @@ async function handleDelete() {
     <!-- Modal Konfirmasi Hapus -->
     <div
       v-if="isDeleteModalOpen"
-      class="fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      v-dialog="
+        () => {
+          isDeleteModalOpen = false;
+        }
+      "
+      class="dialog-backdrop fixed inset-0 z-50 bg-ink-900/40 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
         class="w-full max-w-md bg-paper-0 border border-line-200 rounded-3xl p-6 shadow-card space-y-4 text-center"
@@ -457,7 +473,7 @@ async function handleDelete() {
           <button
             @click="handleDelete"
             :disabled="isDeleting"
-            class="py-2.5 bg-expense-600 text-paper-0 font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            class="py-2.5 bg-expense-600 text-white font-semibold text-xs rounded-xl shadow-soft hover:bg-expense-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             <Loader2 v-if="isDeleting" class="w-4 h-4 animate-spin" />
             <span>{{ isDeleting ? "Merapikan..." : "Ya, Hapus" }}</span>
