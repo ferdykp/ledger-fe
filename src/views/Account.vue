@@ -1,5 +1,6 @@
 <!-- ledger-web/src/views/Account.vue -->
 <script setup>
+import MoneyInput from "@/components/MoneyInput.vue";
 import { ref, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
@@ -382,9 +383,10 @@ async function handleDelete() {
               class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
               >SALDO</label
             >
-            <input
+            <MoneyInput
+              allow-negative
+              aria-label="Saldo dompet"
               v-model="editForm.balance"
-              type="number"
               required
               class="w-full px-4 h-12 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-medium text-ink-900"
             />

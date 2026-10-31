@@ -117,13 +117,6 @@ function getCurrentMonthStr() {
 }
 const currentMonthStr = computed(() => getCurrentMonthStr());
 
-function formatRupiahShort(value) {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}M`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`;
-  if (value >= 1_000) return `${Math.round(value / 1_000)}rb`;
-  return `${Math.round(value)}`;
-}
-
 // 1. Total Pemasukan Bulan Ini (real, difilter bulan berjalan)
 const monthlyIncome = computed(() => Number(monthlyReport.value.income));
 const monthlyExpense = computed(() => Number(monthlyReport.value.expense));
@@ -173,7 +166,7 @@ const cashFlowChartOptions = computed(() => ({
   yaxis: {
     labels: {
       style: { fontSize: "11px", fontWeight: 600, colors: "#8B8698" },
-      formatter: (val) => formatRupiahShort(val),
+      formatter: (val) => formatRupiah(val),
     },
   },
   tooltip: { y: { formatter: (val) => formatRupiah(val) } },

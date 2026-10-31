@@ -95,8 +95,7 @@ const trendOptions = computed(() => ({
   },
   yaxis: {
     labels: {
-      formatter: (value) =>
-        new Intl.NumberFormat("id-ID", { notation: "compact" }).format(value),
+      formatter: (value) => formatRupiah(value),
     },
   },
   tooltip: { y: { formatter: formatRupiah } },

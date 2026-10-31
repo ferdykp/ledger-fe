@@ -1,4 +1,5 @@
 <script setup>
+import { formatRupiah } from "@/utils/formatters";
 import { ref, watch, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import {
@@ -797,11 +798,10 @@ onUnmounted(() => {
               <span>Nominal</span>
 
               <strong>
-                Rp
                 {{
                   result.draft?.amount == null
                     ? "—"
-                    : Number(result.draft.amount).toLocaleString("id-ID")
+                    : formatRupiah(result.draft.amount)
                 }}
               </strong>
             </div>

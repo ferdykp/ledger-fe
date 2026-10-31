@@ -90,7 +90,7 @@ watch(
 |--------------------------------------------------------------------------
 */
 
-const currency = ref(user.value?.currency || "IDR");
+const currency = ref("IDR");
 const language = ref("id");
 const theme = ref(localStorage.getItem("theme") || "light");
 
@@ -639,8 +639,6 @@ async function handleLogout() {
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
                   <option value="IDR">IDR (Rp)</option>
-
-                  <option value="USD">USD ($)</option>
                 </select>
 
                 <ChevronDown

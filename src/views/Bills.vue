@@ -1,4 +1,5 @@
 <script setup>
+import MoneyInput from "@/components/MoneyInput.vue";
 import { useBills } from "@/composables/useBills";
 import {
   Plus,
@@ -219,14 +220,11 @@ const {
               placeholder="Internet rumah" /></label
           ><label
             ><span class="field-label">Nominal</span
-            ><input
+            ><MoneyInput
               v-model="form.amount"
               required
-              type="number"
-              min="0"
-              step="0.01"
               class="w-full px-3"
-              placeholder="350000"
+              placeholder="350.000"
           /></label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label

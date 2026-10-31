@@ -72,9 +72,7 @@ export function useTransactionExport(user, notifyStore) {
 
         printWindow.document.open();
 
-        printWindow.document.write(
-          transactionPrintDocument(transactions, user.value?.currency || "IDR"),
-        );
+        printWindow.document.write(transactionPrintDocument(transactions));
 
         printWindow.document.close();
 
