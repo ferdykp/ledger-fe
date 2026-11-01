@@ -415,7 +415,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="transaction-editor page-shell">
+  <div class="app-page transaction-editor page-shell">
     <div
       class="w-full max-w-2xl mx-auto bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
     >

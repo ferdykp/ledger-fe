@@ -111,7 +111,7 @@ async function handleSubmit() {
   <div class="flex items-center justify-center p-2 sm:p-4 font-body">
     <!-- Card Modal Wrapper -->
     <div
-      class="w-full max-w-lg bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
+      class="account-create-panel w-full max-w-lg bg-paper-0 border border-line-200 rounded-3xl shadow-card overflow-hidden"
     >
       <!-- Header -->
       <div

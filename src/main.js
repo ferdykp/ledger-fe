@@ -1,5 +1,6 @@
 import "./style.css";
 import "./design.css";
+import "./responsive.css";
 import dialog from "./directives/dialog";
 
 import { createApp } from "vue";

@@ -262,7 +262,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 pb-12">
+  <div class="app-page page-shell mx-auto max-w-5xl space-y-6 pb-12">
     <!-- Header -->
     <div class="space-y-2">
       <div

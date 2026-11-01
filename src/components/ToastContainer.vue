@@ -6,7 +6,7 @@ const notificationStore = useNotificationStore();
 
 <template>
   <div
-    class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full px-4 pointer-events-none"
+    class="toast-container fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full px-4 pointer-events-none"
   >
     <TransitionGroup name="toast" tag="div" class="flex flex-col gap-2 w-full">
       <div

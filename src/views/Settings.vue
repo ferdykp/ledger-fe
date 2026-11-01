@@ -337,7 +337,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div class="space-y-6 font-body">
+  <div class="app-page page-shell space-y-6 font-body">
     <!-- =========================================================
          HEADER
     ========================================================== -->

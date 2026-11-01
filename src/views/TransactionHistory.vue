@@ -237,7 +237,7 @@ async function handleDelete() {
 </script>
 
 <template>
-  <div class="space-y-6 font-body">
+  <div class="app-page page-shell space-y-6 font-body">
     <!-- Header Halaman -->
     <div
       class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"

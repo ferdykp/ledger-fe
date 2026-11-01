@@ -156,7 +156,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-shell space-y-6">
+  <div class="app-page page-shell space-y-6">
     <header class="page-heading">
       <div>
         <span class="eyebrow">Laporan keuangan</span>

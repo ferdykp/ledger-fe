@@ -34,7 +34,7 @@ const {
 } = useBills();
 </script>
 <template>
-  <div class="page-shell">
+  <div class="app-page page-shell">
     <div class="page-heading">
       <div>
         <span class="eyebrow">Perencanaan</span>

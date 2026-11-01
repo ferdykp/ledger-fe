@@ -272,7 +272,7 @@ async function fetchCashFlowData() {
 </script>
 
 <template>
-  <div class="bank-dashboard">
+  <div class="app-page bank-dashboard">
     <header class="bank-topbar">
       <div>
         <p class="bank-kicker">

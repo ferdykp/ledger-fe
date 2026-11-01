@@ -546,7 +546,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-shell max-w-6xl">
+  <div class="app-page page-shell max-w-6xl">
     <!-- ============================================================= -->
     <!-- HEADER -->
     <!-- ============================================================= -->

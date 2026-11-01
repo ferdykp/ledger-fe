@@ -32,7 +32,7 @@ function dismiss() {
 <template>
   <div
     v-if="showPrompt"
-    class="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 z-50 max-w-sm bg-ink-900 text-white p-4 rounded-md shadow-violet border border-line-200/20 flex items-center justify-between gap-3 animate-bounce-in"
+    class="pwa-install-prompt fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 z-50 max-w-sm bg-ink-900 text-white p-4 rounded-md shadow-violet border border-line-200/20 flex items-center justify-between gap-3 animate-bounce-in"
   >
     <div class="flex items-center gap-3">
       <div

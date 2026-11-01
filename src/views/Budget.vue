@@ -165,7 +165,7 @@ async function handleDeleteBudget() {
 </script>
 
 <template>
-  <div class="space-y-6 font-body">
+  <div class="app-page page-shell space-y-6 font-body">
     <!-- Header Halaman -->
     <div class="flex items-center justify-between">
       <h1 class="font-display text-2xl md:text-3xl font-bold text-ink-900">
