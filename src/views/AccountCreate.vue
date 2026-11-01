@@ -4,6 +4,7 @@ import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAccountStore } from "@/stores/account";
 import { useNotificationStore } from "@/stores/notification";
+import MoneyInput from "@/components/MoneyInput.vue";
 import {
   X,
   Wallet,
@@ -52,13 +53,9 @@ const colorSwatches = [
 
 // Formatter Tampilan Input Nominal
 const formattedBalance = computed({
-  get() {
-    if (!form.value.balance) return "";
-    return Number(form.value.balance).toLocaleString("id-ID");
-  },
+  get: () => (form.value.balance ? form.value.balance : ""),
   set(newValue) {
-    const rawValue = newValue.replace(/\D/g, "");
-    form.value.balance = rawValue ? Number(rawValue) : 0;
+    form.value.balance = newValue ? Number(newValue) : 0;
   },
 });
 
@@ -181,14 +178,12 @@ async function handleSubmit() {
           >
             SALDO AWAL
           </p>
-          <div class="flex items-center justify-center gap-1.5">
-            <span class="text-violet-600 font-bold text-xl md:text-2xl mt-1">
-              Rp
-            </span>
-            <input
+          <div class="currency-input-row justify-center gap-1.5">
+            <span class="transaction-amount-currency">Rp</span>
+            <MoneyInput
               v-model="formattedBalance"
-              type="tel"
-              inputmode="numeric"
+              :show-prefix="false"
+              aria-label="Saldo awal"
               placeholder="0"
               class="w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
             />
@@ -221,6 +216,7 @@ async function handleSubmit() {
               <input
                 v-model="form.color"
                 type="color"
+                aria-label="Pilih warna kustom"
                 class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
               <span class="text-xs font-bold text-ink-600">+</span>

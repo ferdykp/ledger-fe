@@ -396,6 +396,7 @@ async function handleLogout() {
                 ref="fileInput"
                 type="file"
                 accept="image/*"
+                aria-label="Pilih foto avatar"
                 class="hidden"
                 @change="handleAvatarChange"
               />
@@ -635,6 +636,7 @@ async function handleLogout() {
               <div class="relative">
                 <select
                   v-model="currency"
+                  aria-label="Mata uang utama"
                   @change="savePreferences"
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
@@ -659,6 +661,7 @@ async function handleLogout() {
               <div class="relative">
                 <select
                   v-model="language"
+                  aria-label="Bahasa aplikasi"
                   class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none appearance-none cursor-pointer"
                 >
                   <option value="id">Bahasa Indonesia</option>

@@ -7,6 +7,7 @@ import { storeToRefs } from "pinia";
 import { useAccountStore } from "@/stores/account";
 import { useCategoryStore } from "@/stores/category";
 import { useNotificationStore } from "@/stores/notification";
+import MoneyInput from "@/components/MoneyInput.vue";
 import {
   X,
   Plus,
@@ -228,24 +229,16 @@ onMounted(async () => {
 });
 
 const formattedAmount = computed({
-  get() {
-    if (!form.value.amount) return "";
-    return Number(form.value.amount).toLocaleString("id-ID");
-  },
+  get: () => form.value.amount,
   set(newValue) {
-    const rawValue = newValue.replace(/\D/g, "");
-    form.value.amount = rawValue ? Number(rawValue) : "";
+    form.value.amount = newValue ? Number(newValue) : "";
   },
 });
 
 const formattedNewBalance = computed({
-  get() {
-    if (!newAccountForm.value.balance) return "";
-    return Number(newAccountForm.value.balance).toLocaleString("id-ID");
-  },
+  get: () => (newAccountForm.value.balance ? newAccountForm.value.balance : ""),
   set(newValue) {
-    const rawValue = newValue.replace(/\D/g, "");
-    newAccountForm.value.balance = rawValue ? Number(rawValue) : 0;
+    newAccountForm.value.balance = newValue ? Number(newValue) : 0;
   },
 });
 
@@ -492,18 +485,15 @@ async function handleSubmit() {
           >
             JUMLAH NOMINAL
           </p>
-          <div class="flex items-center justify-center gap-1.5">
-            <span class="text-violet-600 font-bold text-xl md:text-2xl mt-1"
-              >Rp</span
-            >
-            <input
+          <div class="transaction-amount-row">
+            <span class="transaction-amount-currency">Rp</span>
+            <MoneyInput
+              :show-prefix="false"
               aria-label="Jumlah transaksi"
               v-model="formattedAmount"
-              type="tel"
-              inputmode="numeric"
               placeholder="0"
               required
-              class="transaction-amount w-full max-w-[280px] font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 text-center bg-transparent border-none focus:outline-none placeholder:text-ink-300"
+              class="transaction-amount font-mono-money font-extrabold text-3xl md:text-4xl text-ink-900 bg-transparent border-none focus:outline-none placeholder:text-ink-300"
             />
           </div>
         </div>
@@ -539,9 +529,9 @@ async function handleSubmit() {
               <button
                 type="button"
                 @click="confirmDeleteCategory(cat, $event)"
-                class="absolute -top-1 -right-1 w-5 h-5 bg-expense-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-soft cursor-pointer"
+                class="category-remove-action absolute -top-1 -right-1 w-8 h-8 bg-expense-600 text-white rounded-full flex items-center justify-center transition-opacity z-10 shadow-soft cursor-pointer"
                 title="Hapus Kategori"
-                aria-label="Tutup dialog"
+                :aria-label="`Hapus kategori ${cat.name}`"
               >
                 <X class="w-3 h-3 stroke-[3]" />
               </button>
@@ -693,6 +683,7 @@ async function handleSubmit() {
             v-model="form.date"
             type="date"
             required
+            aria-label="Tanggal transaksi"
             class="w-full px-4 h-12 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-medium text-ink-900 transition-colors"
           />
         </div>
@@ -899,6 +890,7 @@ async function handleSubmit() {
             </label>
             <select
               v-model="newAccountForm.type"
+              aria-label="Tipe dompet"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900"
             >
               <option value="cash">Tunai (Cash)</option>
@@ -914,16 +906,11 @@ async function handleSubmit() {
             >
               Saldo Awal
             </label>
-            <div class="relative flex items-center">
-              <span class="absolute left-4 text-sm font-bold text-violet-600"
-                >Rp</span
-              >
-              <input
+            <div class="currency-input-row relative flex items-center">
+              <MoneyInput
                 v-model="formattedNewBalance"
-                type="tel"
-                inputmode="numeric"
                 placeholder="0"
-                class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
+                class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
               />
             </div>
           </div>

@@ -6,6 +6,7 @@ import { storeToRefs } from "pinia";
 import { useGoalStore } from "@/stores/goal";
 import { useNotificationStore } from "@/stores/notification";
 import { formatRupiah } from "@/utils/formatters";
+import MoneyInput from "@/components/MoneyInput.vue";
 import {
   Plus,
   Target,
@@ -56,23 +57,13 @@ const depositForm = ref({
 
 // Formatter Input Nominal Rupiah
 const formattedTargetAmount = computed({
-  get: () =>
-    goalForm.value.target_amount
-      ? Number(goalForm.value.target_amount).toLocaleString("id-ID")
-      : "",
-  set: (val) => {
-    goalForm.value.target_amount = val ? Number(val.replace(/\D/g, "")) : 0;
-  },
+  get: () => (goalForm.value.target_amount ? goalForm.value.target_amount : ""),
+  set: (val) => (goalForm.value.target_amount = val ? Number(val) : 0),
 });
 
 const formattedDepositAmount = computed({
-  get: () =>
-    depositForm.value.amount
-      ? Number(depositForm.value.amount).toLocaleString("id-ID")
-      : "",
-  set: (val) => {
-    depositForm.value.amount = val ? Number(val.replace(/\D/g, "")) : 0;
-  },
+  get: () => (depositForm.value.amount ? depositForm.value.amount : ""),
+  set: (val) => (depositForm.value.amount = val ? Number(val) : 0),
 });
 
 const priorityGoal = computed(() => goals.value[0] || null);
@@ -537,16 +528,12 @@ async function handleDeleteGoal() {
               >Target Nominal</label
             >
             <div class="relative flex items-center">
-              <span class="absolute left-4 text-sm font-bold text-violet-600"
-                >Rp</span
-              >
-              <input
+              <MoneyInput
                 v-model="formattedTargetAmount"
-                type="tel"
-                inputmode="numeric"
                 required
+                aria-label="Target nominal tabungan"
                 placeholder="0"
-                class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
+                class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
               />
             </div>
           </div>
@@ -559,6 +546,7 @@ async function handleDeleteGoal() {
             <input
               v-model="goalForm.target_date"
               type="date"
+              aria-label="Tanggal target"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900"
             />
           </div>
@@ -644,16 +632,12 @@ async function handleDeleteGoal() {
               >Nominal Setoran</label
             >
             <div class="relative flex items-center">
-              <span class="absolute left-4 text-sm font-bold text-violet-600"
-                >Rp</span
-              >
-              <input
+              <MoneyInput
                 v-model="formattedDepositAmount"
-                type="tel"
-                inputmode="numeric"
                 required
+                aria-label="Nominal setoran tabungan"
                 placeholder="0"
-                class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
+                class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
               />
             </div>
           </div>
@@ -667,6 +651,7 @@ async function handleDeleteGoal() {
               v-model="depositForm.date"
               type="date"
               required
+              aria-label="Tanggal setoran"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900"
             />
           </div>

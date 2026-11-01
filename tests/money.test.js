@@ -33,6 +33,12 @@ test("money input groups digits without changing the amount sent to the API", ()
   });
   assert.deepEqual(normalizeMoneyInput(""), { display: "", value: "" });
 });
+test("money input supports precise asset prices when requested", () => {
+  assert.deepEqual(normalizeMoneyInput("1.234,12345678", false, 8), {
+    display: "1.234,12345678",
+    value: "1234.12345678",
+  });
+});
 test("print document uses the same Rupiah format", () => {
   assert.match(
     transactionPrintDocument([{ amount: "1250000.25" }]),

@@ -7,6 +7,7 @@ import { useBudgetStore } from "@/stores/budget";
 import { useCategoryStore } from "@/stores/category";
 import { useNotificationStore } from "@/stores/notification";
 import { formatRupiah } from "@/utils/formatters";
+import MoneyInput from "@/components/MoneyInput.vue";
 import {
   Plus,
   Target,
@@ -57,13 +58,9 @@ const form = ref({
 
 // Formatter Input Limit Nominal
 const formattedAmountLimit = computed({
-  get() {
-    if (!form.value.amount_limit) return "";
-    return Number(form.value.amount_limit).toLocaleString("id-ID");
-  },
+  get: () => (form.value.amount_limit ? form.value.amount_limit : ""),
   set(newValue) {
-    const rawValue = newValue.replace(/\D/g, "");
-    form.value.amount_limit = rawValue ? Number(rawValue) : 0;
+    form.value.amount_limit = newValue ? Number(newValue) : 0;
   },
 });
 
@@ -296,16 +293,20 @@ async function handleDeleteBudget() {
 
               <!-- Quick Action Edit & Delete -->
               <div
-                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="action-controls flex items-center gap-1"
               >
                 <button
                   @click="openModal(b)"
+                  :aria-label="`Edit anggaran ${b.category?.name || ''}`"
+                  :title="`Edit anggaran ${b.category?.name || ''}`"
                   class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50 cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
                   @click="confirmDeleteBudget(b)"
+                  :aria-label="`Hapus anggaran ${b.category?.name || ''}`"
+                  :title="`Hapus anggaran ${b.category?.name || ''}`"
                   class="p-1.5 text-ink-400 hover:text-expense-600 rounded-lg hover:bg-expense-50 cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
@@ -367,6 +368,7 @@ async function handleDeleteBudget() {
             <select
               v-model="form.category_id"
               required
+              aria-label="Kategori pengeluaran"
               :disabled="!!editingBudgetId"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none disabled:opacity-60"
             >
@@ -388,16 +390,12 @@ async function handleDeleteBudget() {
               BATAS LIMIT NOMINAL
             </label>
             <div class="relative flex items-center">
-              <span class="absolute left-4 text-sm font-bold text-violet-600"
-                >Rp</span
-              >
-              <input
+              <MoneyInput
                 v-model="formattedAmountLimit"
-                type="tel"
-                inputmode="numeric"
                 required
+                aria-label="Batas limit nominal"
                 placeholder="0"
-                class="w-full pl-11 pr-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
+                class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-mono-money font-extrabold text-ink-900"
               />
             </div>
           </div>

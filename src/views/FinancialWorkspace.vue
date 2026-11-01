@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { localDate } from "@/utils/dates";
 import { formatRupiah } from "@/utils/formatters";
+import MoneyInput from "@/components/MoneyInput.vue";
 import {
   addDecimal,
   compareDecimal,
@@ -818,12 +819,11 @@ onMounted(async () => {
                         aria-label="Jumlah"
                     /></label>
                     <label class="financial-field"
-                      >Harga per unit<input
+                      >Harga per unit<MoneyInput
                         v-model="item.unit_price"
-                        type="number"
                         min="0"
                         step="0.01"
-                        placeholder="Rp"
+                        placeholder="0"
                         aria-label="Harga per unit"
                     /></label>
                   </div>
@@ -1055,14 +1055,13 @@ onMounted(async () => {
                   step="0.0001"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                   aria-label="Jumlah"
-                /><input
+                /><MoneyInput
                   v-model="itemForm.unit_price"
-                  type="number"
                   min="0"
                   step="0.01"
                   required
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
-                  placeholder="Harga/unit"
+                  placeholder="0"
                 /><button class="primary-button" :disabled="busy">
                   Tambah
                 </button>
@@ -1081,6 +1080,7 @@ onMounted(async () => {
                 <select
                   v-model="obligationForm.goal_item_id"
                   required
+                  aria-label="Kebutuhan untuk jadwal pembayaran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
                   <option value="">Pilih kebutuhan</option>
@@ -1096,17 +1096,18 @@ onMounted(async () => {
                   required
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                   placeholder="Contoh: DP 30%"
-                /><input
+                /><MoneyInput
                   v-model="obligationForm.amount"
-                  type="number"
                   min="0.01"
                   step="0.01"
                   required
+                  aria-label="Nominal kewajiban pembayaran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
-                  placeholder="Nominal"
+                  placeholder="0"
                 /><input
                   v-model="obligationForm.due_date"
                   type="date"
+                  aria-label="Tanggal jatuh tempo pembayaran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 /><input
                   v-model="obligationForm.payee"
@@ -1166,18 +1167,19 @@ onMounted(async () => {
                 class="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_1fr_auto]"
                 @submit.prevent="addContribution"
               >
-                <input
+                <MoneyInput
                   v-model="contribution.amount"
-                  type="number"
                   min="0.01"
                   step="0.01"
                   required
+                  aria-label="Nominal setoran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
-                  placeholder="Nominal"
+                  placeholder="0"
                 /><input
                   v-model="contribution.date"
                   type="date"
                   required
+                  aria-label="Tanggal setoran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 /><input
                   v-model="contribution.note"
@@ -1226,6 +1228,7 @@ onMounted(async () => {
                 <select
                   v-model="cashForm.account_id"
                   required
+                  aria-label="Rekening untuk alokasi kas"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
                   <option value="">Pilih rekening</option>
@@ -1238,18 +1241,19 @@ onMounted(async () => {
                   </option></select
                 ><select
                   v-model="cashForm.action"
+                  aria-label="Tindakan alokasi kas"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
                   <option value="allocate">Alokasikan</option>
                   <option value="release">Lepaskan alokasi</option></select
-                ><input
+                ><MoneyInput
                   v-model="cashForm.amount"
-                  type="number"
                   min="0.01"
                   step="0.01"
                   required
+                  aria-label="Nominal alokasi kas"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
-                  placeholder="Nominal"
+                  placeholder="0"
                 /><input
                   v-model="cashForm.note"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
@@ -1457,11 +1461,11 @@ onMounted(async () => {
                   selectedAsset.type === "gold"
                     ? "Harga buyback per gram"
                     : "NAB per unit"
-                }}<input
+                }}<MoneyInput
                   v-model="priceForm.price"
-                  type="number"
                   min="0.00000001"
                   step="0.00000001"
+                  :precision="8"
                   required /></label
               ><label class="financial-field"
                 >Tanggal valuasi<input
@@ -1537,9 +1541,8 @@ onMounted(async () => {
                   </select></label
                 >
                 <label class="financial-field"
-                  >Nominal transaksi<input
+                  >Nominal transaksi<MoneyInput
                     v-model="assetTrade.amount"
-                    type="number"
                     min="0"
                     step="0.01"
                     :placeholder="
@@ -1567,11 +1570,11 @@ onMounted(async () => {
                     selectedAsset.type === "gold"
                       ? "Harga satuan"
                       : "NAB per unit"
-                  }}<input
+                  }}<MoneyInput
                     v-model="assetTrade.unit_price"
-                    type="number"
                     min="0.00000001"
                     step="0.00000001"
+                    :precision="8"
                     :placeholder="
                       selectedAsset.type === 'gold'
                         ? 'Harga per satuan harga'
@@ -1602,9 +1605,8 @@ onMounted(async () => {
                     placeholder="Contoh: 0,5"
                 /></label>
                 <label class="financial-field"
-                  >Biaya transaksi<input
+                  >Biaya transaksi<MoneyInput
                     v-model="assetTrade.fees"
-                    type="number"
                     min="0"
                     step="0.01"
                     placeholder="Opsional"
@@ -1668,6 +1670,7 @@ onMounted(async () => {
                 <select
                   v-model="assetAllocation.goal_id"
                   required
+                  aria-label="Target alokasi aset"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
                   <option value="">Pilih target</option>
@@ -1680,10 +1683,12 @@ onMounted(async () => {
                   min="0.00000001"
                   step="0.00000001"
                   required
+                  aria-label="Jumlah aset untuk dialokasikan"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                   :placeholder="selectedAsset.type === 'gold' ? 'Gram' : 'Unit'"
                 /><select
                   v-model="assetAllocation.action"
+                  aria-label="Tindakan alokasi aset"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
                   <option value="allocate">Alokasikan</option>
@@ -1734,16 +1739,16 @@ onMounted(async () => {
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         aria-label="Jumlah unit aktual"
                         placeholder="Unit dicairkan"
-                      /><input
+                      /><MoneyInput
                         v-model="pendingForm.amount"
-                        type="number"
                         min="0.01"
                         step="0.01"
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         aria-label="Nominal pencairan"
-                        placeholder="Hasil aktual"
+                        placeholder="0"
                       /><select
                         v-model="pendingForm.cash_account_id"
+                        aria-label="Rekening penerima pencairan"
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                       >
                         <option value="">Rekening penerima</option>
@@ -1764,17 +1769,18 @@ onMounted(async () => {
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         aria-label="Jumlah unit aktual"
                         placeholder="Unit aktual"
-                      /><input
+                      /><MoneyInput
                         v-model="pendingForm.unit_price"
-                        type="number"
                         min="0.00000001"
                         step="0.00000001"
+                        :precision="8"
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         aria-label="NAB aktual"
-                        placeholder="NAB final"
+                        placeholder="0"
                       /><template v-if="!tx.cash_debited"
                         ><select
                           v-model="pendingForm.cash_account_id"
+                          aria-label="Rekening sumber pembelian"
                           class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         >
                           <option value="">Rekening sumber</option>

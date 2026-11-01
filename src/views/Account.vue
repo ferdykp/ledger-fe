@@ -377,6 +377,8 @@ async function handleDelete() {
               v-model="editForm.name"
               type="text"
               required
+              aria-label="Nama akun"
+              placeholder="Contoh: BCA Utama"
               class="w-full px-4 h-12 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-medium text-ink-900"
             />
           </div>

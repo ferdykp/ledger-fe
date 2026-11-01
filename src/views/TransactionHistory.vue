@@ -271,6 +271,7 @@ async function handleDelete() {
         <div class="relative shrink-0">
           <select
             v-model="selectedTime"
+            aria-label="Filter waktu transaksi"
             class="appearance-none pl-4 pr-8 py-2 bg-paper-0 border border-violet-600/40 focus:border-violet-600 text-violet-700 rounded-full text-xs font-bold cursor-pointer focus:outline-none"
           >
             <option value="all">Semua Waktu</option>
@@ -286,6 +287,7 @@ async function handleDelete() {
         <div class="relative shrink-0">
           <select
             v-model="selectedCategory"
+            aria-label="Filter kategori transaksi"
             class="appearance-none pl-4 pr-8 py-2 bg-paper-0 border border-line-200 focus:border-violet-600 text-ink-700 rounded-full text-xs font-semibold cursor-pointer focus:outline-none"
           >
             <option value="all">Kategori: Semua</option>
@@ -302,6 +304,7 @@ async function handleDelete() {
         <div class="relative shrink-0">
           <select
             v-model="selectedAccount"
+            aria-label="Filter rekening transaksi"
             class="appearance-none pl-4 pr-8 py-2 bg-paper-0 border border-line-200 focus:border-violet-600 text-ink-700 rounded-full text-xs font-semibold cursor-pointer focus:outline-none"
           >
             <option value="all">Akun: Semua</option>
@@ -318,6 +321,7 @@ async function handleDelete() {
         <div class="relative shrink-0">
           <select
             v-model="selectedType"
+            aria-label="Filter jenis transaksi"
             class="appearance-none pl-4 pr-8 py-2 bg-paper-0 border border-line-200 focus:border-violet-600 text-ink-700 rounded-full text-xs font-semibold cursor-pointer focus:outline-none"
           >
             <option value="all">Jenis Transaksi</option>

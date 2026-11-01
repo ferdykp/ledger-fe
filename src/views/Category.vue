@@ -274,16 +274,20 @@ async function handleDelete() {
 
           <!-- Action Buttons -->
           <div
-            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            class="action-controls flex items-center gap-1"
           >
             <button
               @click="openEditModal(cat)"
+              :aria-label="`Edit kategori ${cat.name}`"
+              :title="`Edit kategori ${cat.name}`"
               class="p-1.5 text-ink-400 hover:text-violet-600 rounded-lg hover:bg-violet-50 transition-colors cursor-pointer"
             >
               <Pencil class="w-3.5 h-3.5" />
             </button>
             <button
               @click="confirmDelete(cat)"
+              :aria-label="`Hapus kategori ${cat.name}`"
+              :title="`Hapus kategori ${cat.name}`"
               class="p-1.5 text-ink-400 hover:text-expense-600 rounded-lg hover:bg-expense-50 transition-colors cursor-pointer"
             >
               <Trash2 class="w-3.5 h-3.5" />
