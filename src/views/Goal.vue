@@ -557,7 +557,7 @@ async function handleDeleteGoal() {
               >Pilih Ikon</label
             >
             <div
-              class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+              class="chip-scroll-rail flex items-center gap-2 overflow-x-auto no-scrollbar"
             >
               <button
                 v-for="item in availableIcons"

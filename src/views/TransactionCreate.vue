@@ -47,6 +47,7 @@ const isLoading = ref(false);
 // State Modal Quick Add Category
 const isAddCategoryModalOpen = ref(false);
 const isCreatingCategory = ref(false);
+const isManagingCategories = ref(false);
 
 // State Delete Kategori
 const isDeleteCategoryModalOpen = ref(false);
@@ -506,17 +507,30 @@ async function handleSubmit() {
             >
               KATEGORI
             </label>
-            <button
-              type="button"
-              @click="openAddCategoryModal"
-              class="text-xs font-bold text-violet-600 hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <Plus class="w-3.5 h-3.5" />
-              <span>Kategori</span>
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                @click="isManagingCategories = !isManagingCategories"
+                class="transaction-category-manage-toggle text-xs font-bold text-ink-600 hover:text-violet-600 flex items-center gap-1 cursor-pointer"
+                :aria-pressed="isManagingCategories"
+              >
+                <span>{{ isManagingCategories ? "Selesai" : "Kelola" }}</span>
+              </button>
+              <button
+                type="button"
+                @click="openAddCategoryModal"
+                class="text-xs font-bold text-violet-600 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Plus class="w-3.5 h-3.5" />
+                <span>Kategori</span>
+              </button>
+            </div>
           </div>
 
-          <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <div
+            class="transaction-category-grid grid grid-cols-3 sm:grid-cols-4 gap-3"
+            :class="{ 'transaction-category-manage': isManagingCategories }"
+          >
             <div
               v-for="cat in availableCategories"
               :key="cat.id"
@@ -525,7 +539,7 @@ async function handleSubmit() {
                 form.category_id = form.category_id === cat.id ? null : cat.id
               "
             >
-              <!-- Tombol Delete Kategori (Hover) -->
+              <!-- Aksi hapus tersedia lewat hover desktop atau mode Kelola di layar sentuh. -->
               <button
                 type="button"
                 @click="confirmDeleteCategory(cat, $event)"
@@ -600,7 +614,7 @@ async function handleSubmit() {
           </div>
 
           <div
-            class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+            class="chip-scroll-rail flex items-center gap-2 overflow-x-auto no-scrollbar"
           >
             <!-- Chip Daftar Akun/Sumber Dana -->
             <button
@@ -647,7 +661,7 @@ async function handleSubmit() {
             KE DOMPET TUJUAN
           </label>
           <div
-            class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+            class="chip-scroll-rail flex items-center gap-2 overflow-x-auto no-scrollbar"
           >
             <button
               v-for="acc in accountStore.accounts.filter(

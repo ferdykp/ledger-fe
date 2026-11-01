@@ -265,7 +265,7 @@ async function handleDelete() {
       class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3"
     >
       <div
-        class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar"
+        class="chip-scroll-rail flex items-center gap-2 overflow-x-auto no-scrollbar"
       >
         <!-- Filter Waktu -->
         <div class="relative shrink-0">
