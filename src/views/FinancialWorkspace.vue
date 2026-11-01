@@ -17,6 +17,8 @@ const route = useRoute();
 const router = useRouter();
 const notify = useNotificationStore();
 const tab = ref("goals");
+const showGoalForm = ref(false);
+const showAssetForm = ref(false);
 const goals = ref([]);
 const accounts = ref([]);
 const assets = ref([]);
@@ -159,6 +161,19 @@ function selectGoal(id) {
   selectedGoalId.value = id;
   fetchGoalDetails();
 }
+function switchTab(nextTab) {
+  tab.value = nextTab;
+  selectedGoalId.value = null;
+  selectedAssetId.value = null;
+  showGoalForm.value = false;
+  showAssetForm.value = false;
+}
+function backToGoalList() {
+  selectedGoalId.value = null;
+}
+function backToAssetList() {
+  selectedAssetId.value = null;
+}
 function addTemplate(name) {
   goalForm.value.name = name === "Custom" ? "" : name;
   goalForm.value.items = templates[name].map((label) => ({
@@ -215,10 +230,6 @@ async function fetchAll() {
     goals.value = goalRes.data.data || [];
     accounts.value = accountRes.data.data || [];
     assets.value = assetRes.data.data || [];
-    if (!selectedGoalId.value && goals.value.length)
-      selectedGoalId.value = goals.value[0].id;
-    if (!selectedAssetId.value && assets.value.length)
-      selectedAssetId.value = assets.value[0].id;
     if (selectedGoalId.value) await fetchGoalDetails();
   } catch (err) {
     error.value = normalizeError(
@@ -371,6 +382,7 @@ async function createGoal() {
       });
     }
     selectedGoalId.value = created.id;
+    showGoalForm.value = false;
     goalForm.value = { name: "", target_date: "", icon: "target", items: [] };
     notify.notify({
       message: "Target dan rincian anggaran berhasil dibuat.",
@@ -516,6 +528,7 @@ async function createAsset() {
   try {
     const { data } = await api.post("/api/assets", assetForm.value);
     selectedAssetId.value = data.data.id;
+    showAssetForm.value = false;
     assetForm.value = {
       type: "gold",
       name: "",
@@ -690,7 +703,7 @@ onMounted(async () => {
           :aria-selected="tab === 'goals'"
           class="financial-tab"
           :class="{ 'is-active': tab === 'goals' }"
-          @click="tab = 'goals'"
+          @click="switchTab('goals')"
         >
           Target
         </button>
@@ -699,7 +712,7 @@ onMounted(async () => {
           :aria-selected="tab === 'assets'"
           class="financial-tab"
           :class="{ 'is-active': tab === 'assets' }"
-          @click="tab = 'assets'"
+          @click="switchTab('assets')"
         >
           Aset
         </button>
@@ -718,7 +731,7 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="tab === 'goals'">
-      <section class="goal-summary-grid">
+      <section v-if="!selectedGoal" class="goal-summary-grid">
         <article class="surface-card goal-summary-card goal-summary-primary">
           <p class="text-xs text-ink-500">Total anggaran target</p>
           <p class="mt-2 text-xl font-bold">
@@ -740,14 +753,25 @@ onMounted(async () => {
         </article>
       </section>
 
-      <section class="goal-planner-layout">
-        <div class="goal-planner-sidebar space-y-4">
-          <article class="surface-card planner-card">
+      <section
+        class="goal-planner-layout"
+        :class="selectedGoal ? 'is-detail-view' : 'is-list-view'"
+      >
+        <div v-if="!selectedGoal" class="goal-planner-sidebar space-y-4">
+          <article v-if="showGoalForm" class="surface-card planner-card">
             <div class="planner-card-heading">
               <div>
                 <h2 class="font-bold">Buat target</h2>
                 <p>Pilih contoh, lalu sesuaikan anggarannya.</p>
               </div>
+              <button
+                type="button"
+                class="goal-close-create"
+                aria-label="Tutup formulir target"
+                @click="showGoalForm = false"
+              >
+                ×
+              </button>
             </div>
             <div class="goal-template-list">
               <button
@@ -838,50 +862,95 @@ onMounted(async () => {
               </button>
             </form>
           </article>
-          <article class="surface-card planner-card">
-            <h2 class="font-bold">Daftar target</h2>
+          <article class="surface-card planner-card goal-list-panel">
+            <div class="goal-list-heading">
+              <div>
+                <h2 class="font-bold">Target Anda</h2>
+                <p>Lihat progres setiap rencana keuangan.</p>
+              </div>
+              <button
+                type="button"
+                class="primary-button goal-add-button"
+                @click="showGoalForm = true"
+              >
+                <span>+</span> Buat target
+              </button>
+            </div>
             <div
               v-if="!goals.length"
-              class="py-6 text-center text-sm text-ink-500"
+              class="goal-list-empty"
             >
-              Belum ada target. Mulai dari formulir di atas.
+              <span class="goal-empty-mark">◎</span>
+              <strong>Belum ada target</strong>
+              <p>Buat target pertama untuk mulai merencanakan kebutuhan Anda.</p>
+              <button
+                type="button"
+                class="secondary-button"
+                @click="showGoalForm = true"
+              >
+                Buat target pertama
+              </button>
             </div>
-            <button
-              v-for="goal in goals"
-              :key="goal.id"
-              class="mt-2 block w-full rounded-2xl border p-3 text-left transition"
-              :class="
-                goal.id === selectedGoalId
-                  ? 'border-primary-600 bg-primary-100/40'
-                  : 'border-line-200 hover:bg-base-50'
-              "
-              @click="selectGoal(goal.id)"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <strong class="text-sm">{{ goal.name }}</strong
-                ><span class="text-[11px] text-ink-500">{{
-                  goal.target_date || "Tanpa tenggat"
-                }}</span>
-              </div>
-              <div class="mt-2 flex justify-between text-xs">
-                <span>{{ formatRupiah(goal.current_amount) }} tercatat</span
-                ><b>{{
-                  formatRupiah(goal.budget_total || goal.target_amount)
-                }}</b>
-              </div>
-              <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-base-100">
-                <div
-                  class="h-full rounded-full bg-primary-600"
-                  :style="{
-                    width: `${Math.min(100, goal.progress_percent || 0)}%`,
-                  }"
-                ></div>
-              </div>
-            </button>
+            <div v-else class="goal-card-grid">
+              <button
+                v-for="goal in goals"
+                :key="goal.id"
+                class="goal-list-card"
+                @click="selectGoal(goal.id)"
+              >
+                <div class="goal-list-card-copy">
+                  <span class="goal-list-card-icon">◎</span>
+                  <span class="goal-list-card-text">
+                    <strong>{{ goal.name }}</strong>
+                    <small>{{ goal.target_date || "Tanpa tenggat" }}</small>
+                  </span>
+                  <svg
+                    class="goal-progress-ring"
+                    viewBox="0 0 48 48"
+                    role="img"
+                    :aria-label="`Progres ${Math.round(Number(goal.progress_percent) || 0)} persen`"
+                  >
+                    <circle class="goal-progress-track" cx="24" cy="24" r="20" />
+                    <circle
+                      class="goal-progress-value"
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      :style="{
+                        strokeDasharray: '125.66',
+                        strokeDashoffset: `${125.66 - 1.2566 * Math.min(100, Math.max(0, Number(goal.progress_percent) || 0))}`,
+                      }"
+                    />
+                    <text x="24" y="26" text-anchor="middle">
+                      {{ Math.round(Number(goal.progress_percent) || 0) }}%
+                    </text>
+                  </svg>
+                </div>
+                <div class="goal-list-card-values">
+                  <span>{{ formatRupiah(goal.current_amount) }} terkumpul</span>
+                  <b>{{ formatRupiah(goal.budget_total || goal.target_amount) }}</b>
+                </div>
+                <div class="goal-list-progress-track">
+                  <span
+                    :style="{
+                      width: `${Math.min(100, Math.max(0, Number(goal.progress_percent) || 0))}%`,
+                    }"
+                  ></span>
+                </div>
+                <span class="goal-list-open">Lihat detail <span>›</span></span>
+              </button>
+            </div>
           </article>
         </div>
 
         <div v-if="selectedGoal" class="goal-detail-layout">
+          <button
+            type="button"
+            class="workspace-back-button"
+            @click="backToGoalList"
+          >
+            <span aria-hidden="true">‹</span> Semua target
+          </button>
           <section class="surface-card goal-funding-card">
             <div
               class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -1288,7 +1357,7 @@ onMounted(async () => {
     </template>
 
     <template v-else>
-      <section class="asset-summary-grid">
+      <section v-if="!selectedAsset" class="asset-summary-grid">
         <article class="surface-card asset-summary-card asset-summary-primary">
           <p>Nilai aset terestimasi</p>
           <b>{{
@@ -1323,14 +1392,25 @@ onMounted(async () => {
           }}</b>
         </article>
       </section>
-      <section class="asset-workspace-layout">
-        <div class="asset-workspace-sidebar">
-          <article class="surface-card planner-card">
+      <section
+        class="asset-workspace-layout"
+        :class="selectedAsset ? 'has-selected-asset' : 'is-list-view'"
+      >
+        <div v-if="!selectedAsset" class="asset-workspace-sidebar">
+          <article v-if="showAssetForm" class="surface-card planner-card">
             <div class="planner-card-heading">
               <div>
-                <h2 class="font-bold">Tambahkan aset</h2>
+                <h2 class="font-bold">Tambah aset</h2>
                 <p>Catat produk emas atau reksa dana pasar uang.</p>
               </div>
+              <button
+                type="button"
+                class="goal-close-create"
+                aria-label="Tutup formulir aset"
+                @click="showAssetForm = false"
+              >
+                ×
+              </button>
             </div>
             <form class="asset-create-form" @submit.prevent="createAsset">
               <label class="financial-field"
@@ -1365,40 +1445,81 @@ onMounted(async () => {
               </button>
             </form>
           </article>
-          <article class="surface-card planner-card">
-            <h2 class="font-bold">Portofolio</h2>
-            <p v-if="!assets.length" class="py-5 text-sm text-ink-500">
-              Belum ada aset yang dicatat.
-            </p>
-            <button
-              v-for="asset in assets"
-              :key="asset.id"
-              class="asset-portfolio-card"
-              :class="{ 'is-active': asset.id === selectedAssetId }"
-              @click="selectedAssetId = asset.id"
-            >
-              <div class="asset-portfolio-card-heading">
-                <b>{{ asset.name }}</b
-                ><span>{{ asset.type === "gold" ? "Emas" : "RDPU" }}</span>
+          <article class="surface-card planner-card asset-list-panel">
+            <div class="goal-list-heading">
+              <div>
+                <h2 class="font-bold">Portofolio aset</h2>
+                <p>Emas dan RDPU yang Anda catat.</p>
               </div>
-              <div class="asset-portfolio-card-value">
-                <span
-                  >{{ asset.quantity }}
-                  {{ asset.type === "gold" ? "gram" : "unit" }}</span
-                ><b>{{
-                  asset.estimated_value
-                    ? formatRupiah(asset.estimated_value)
-                    : "Belum ada valuasi"
-                }}</b>
-              </div>
-              <p v-if="asset.valuation_at">
-                Harga diperbarui {{ asset.valuation_at.slice(0, 10) }} ·
-                {{ asset.price_source }}
-              </p>
-            </button>
+              <button
+                type="button"
+                class="primary-button goal-add-button"
+                @click="showAssetForm = true"
+              >
+                <span>+</span> Tambah aset
+              </button>
+            </div>
+            <div v-if="!assets.length" class="goal-list-empty">
+              <span class="asset-empty-mark">Au</span>
+              <strong>Portofolio masih kosong</strong>
+              <p>Tambahkan emas atau RDPU untuk mulai mencatat aset.</p>
+              <button
+                type="button"
+                class="secondary-button"
+                @click="showAssetForm = true"
+              >
+                Tambah aset pertama
+              </button>
+            </div>
+            <div v-else class="asset-portfolio-grid">
+              <button
+                v-for="asset in assets"
+                :key="asset.id"
+                class="asset-portfolio-card"
+                @click="selectedAssetId = asset.id"
+              >
+                <div class="asset-portfolio-card-identity">
+                  <span
+                    class="asset-type-mark"
+                    :class="asset.type === 'gold' ? 'is-gold' : 'is-rdpu'"
+                    aria-hidden="true"
+                    >{{ asset.type === "gold" ? "Au" : "RD" }}</span
+                  >
+                  <span class="asset-identity-copy">
+                    <b>{{ asset.name }}</b>
+                    <small>{{ asset.provider || (asset.type === "gold" ? "Emas" : "RDPU") }}</small>
+                  </span>
+                  <span class="asset-type-pill">{{ asset.type === "gold" ? "Emas" : "RDPU" }}</span>
+                </div>
+                <div class="asset-portfolio-card-value">
+                  <span>Nilai estimasi</span>
+                  <b>{{
+                    asset.estimated_value
+                      ? formatRupiah(asset.estimated_value)
+                      : "Belum ada valuasi"
+                  }}</b>
+                </div>
+                <div class="asset-portfolio-card-footer">
+                  <span>{{ asset.quantity }} {{ asset.type === "gold" ? "gram" : "unit" }}</span>
+                  <span
+                    v-if="asset.unrealized_profit_loss != null"
+                    :class="Number(asset.unrealized_profit_loss) >= 0 ? 'is-gain' : 'is-loss'"
+                    >{{ formatRupiah(asset.unrealized_profit_loss) }}</span
+                  >
+                </div>
+                <div class="asset-portfolio-card-open">Lihat detail <span>›</span></div>
+              </button>
+            </div>
           </article>
         </div>
         <div v-if="selectedAsset" class="asset-detail-layout">
+          <button
+            type="button"
+            class="workspace-back-button"
+            @click="backToAssetList"
+          >
+            <span aria-hidden="true">‹</span> Semua aset
+          </button>
           <section class="surface-card asset-detail-card">
             <div class="asset-detail-heading">
               <div>

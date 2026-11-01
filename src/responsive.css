@@ -675,6 +675,286 @@ input[type="radio"] {
   min-width: 0;
 }
 
+.goal-planner-layout.is-list-view,
+.goal-planner-layout.is-detail-view,
+.asset-workspace-layout.is-list-view,
+.asset-workspace-layout.has-selected-asset {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.goal-list-panel,
+.asset-list-panel {
+  min-width: 0;
+  padding: clamp(18px, 2.4vw, 30px);
+}
+
+.goal-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.goal-list-heading h2 {
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.25;
+}
+
+.goal-list-heading p {
+  margin-top: 5px;
+  color: var(--color-ink-500);
+  font-size: 13px;
+}
+
+.goal-add-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 15px;
+  white-space: nowrap;
+}
+
+.goal-add-button > span {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.goal-card-grid,
+.asset-portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 265px), 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.goal-list-card {
+  display: grid;
+  min-width: 0;
+  min-height: 180px;
+  align-content: start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-line-200);
+  border-radius: 20px;
+  color: var(--color-ink-900);
+  background: var(--color-paper-0);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.goal-list-card:hover,
+.goal-list-card:focus-visible {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-600) 45%,
+    var(--color-line-200)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-primary-100) 28%,
+    var(--color-paper-0)
+  );
+  box-shadow: var(--shadow-soft);
+}
+
+.goal-list-card-copy {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.goal-list-card-icon,
+.goal-empty-mark,
+.asset-empty-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--color-primary-700);
+  background: var(--color-primary-100);
+  font-size: 25px;
+  line-height: 1;
+}
+
+.goal-list-card-text,
+.asset-identity-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.goal-list-card-text strong,
+.asset-identity-copy b {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-list-card-text small,
+.asset-identity-copy small {
+  overflow: hidden;
+  color: var(--color-ink-500);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-progress-ring {
+  width: 52px;
+  height: 52px;
+  overflow: visible;
+}
+
+.goal-progress-ring circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.goal-progress-track {
+  stroke: var(--color-base-100);
+}
+
+.goal-progress-value {
+  stroke: var(--color-primary-600);
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 300ms ease;
+}
+
+.goal-progress-ring text {
+  fill: var(--color-ink-900);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.goal-list-card-values,
+.asset-portfolio-card-value,
+.asset-portfolio-card-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.goal-list-card-values span,
+.asset-portfolio-card-value span,
+.asset-portfolio-card-footer {
+  color: var(--color-ink-500);
+  font-size: 11px;
+}
+
+.goal-list-card-values b,
+.asset-portfolio-card-value b {
+  overflow-wrap: anywhere;
+  color: var(--color-ink-900);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.goal-list-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-base-100);
+}
+
+.goal-list-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary-600), #50b998);
+  transition: width 300ms ease;
+}
+
+.goal-list-open,
+.asset-portfolio-card-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-primary-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.goal-list-open > span,
+.asset-portfolio-card-open > span {
+  font-size: 20px;
+  line-height: 0.8;
+}
+
+.goal-list-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 34px 16px 18px;
+  text-align: center;
+}
+
+.goal-list-empty > strong {
+  color: var(--color-ink-900);
+  font-size: 15px;
+}
+
+.goal-list-empty > p {
+  max-width: 42ch;
+  margin: 0 0 8px;
+  color: var(--color-ink-500);
+  font-size: 13px;
+}
+
+.goal-list-empty .secondary-button {
+  min-height: 42px;
+  padding-inline: 16px;
+}
+
+.goal-close-create,
+.workspace-back-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line-200);
+  border-radius: 12px;
+  color: var(--color-ink-700);
+  background: var(--color-paper-0);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.goal-close-create {
+  width: 40px;
+  padding: 0;
+  font-size: 22px;
+}
+
+.workspace-back-button {
+  justify-self: start;
+  min-height: 42px;
+}
+
+.workspace-back-button > span {
+  font-size: 22px;
+  line-height: 0.8;
+}
+
 .planner-card,
 .goal-detail-card,
 .goal-funding-card,
@@ -1043,43 +1323,118 @@ input[type="radio"] {
 .asset-portfolio-card {
   display: grid;
   width: 100%;
-  min-height: 88px;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 13px 14px;
+  min-height: 190px;
+  align-content: start;
+  gap: 14px;
+  margin: 0;
+  padding: 17px;
   border: 1px solid var(--color-line-200);
-  border-radius: 15px;
+  border-radius: 20px;
   color: var(--color-ink-900);
   background: var(--color-paper-0);
   text-align: left;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.asset-portfolio-card.is-active {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-100);
+.asset-portfolio-card:hover,
+.asset-portfolio-card:focus-visible {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-600) 45%,
+    var(--color-line-200)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-primary-100) 28%,
+    var(--color-paper-0)
+  );
+  box-shadow: var(--shadow-soft);
 }
 
-.asset-portfolio-card-heading,
-.asset-portfolio-card-value {
+.asset-portfolio-card-identity {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: center;
+  gap: 11px;
   min-width: 0;
 }
 
-.asset-portfolio-card-heading b,
+.asset-type-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  place-items: center;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.asset-type-mark.is-gold {
+  color: #8a5b00;
+  background: #fff3cf;
+}
+
+.asset-type-mark.is-rdpu {
+  color: var(--color-primary-700);
+  background: var(--color-primary-100);
+}
+
+.asset-identity-copy {
+  flex: 1;
+}
+
+.asset-type-pill {
+  flex: none;
+  padding: 5px 8px;
+  border: 1px solid var(--color-line-200);
+  border-radius: 999px;
+  color: var(--color-ink-600);
+  background: var(--color-base-50);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.asset-portfolio-card-value {
+  align-items: flex-end;
+  padding-top: 4px;
+}
+
+.asset-portfolio-card-value span {
+  flex: none;
+}
+
+.asset-portfolio-card-value b {
+  text-align: right;
+}
+
+.asset-portfolio-card-footer {
+  padding-top: 11px;
+  border-top: 1px solid var(--color-line-200);
+}
+
+.asset-portfolio-card-footer .is-gain {
+  color: var(--color-income-700);
+  font-weight: 700;
+}
+
+.asset-portfolio-card-footer .is-loss {
+  color: var(--color-expense-700);
+  font-weight: 700;
+}
+
 .asset-portfolio-card-value b,
 .asset-portfolio-card-value span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.asset-portfolio-card-heading span,
-.asset-portfolio-card > p {
-  flex: none;
-  color: var(--color-ink-500);
-  font-size: 11px;
+.asset-portfolio-card-open {
+  padding-top: 2px;
 }
 
 .asset-detail-heading {
@@ -1240,6 +1595,11 @@ input[type="radio"] {
   );
 }
 
+.dark .asset-type-mark.is-gold {
+  color: #f5cc69;
+  background: #493a19;
+}
+
 @media (min-width: 1180px) {
   .goal-planner-layout {
     grid-template-columns: minmax(300px, 0.82fr) minmax(0, 2fr);
@@ -1309,6 +1669,12 @@ input[type="radio"] {
   .goal-detail-layout,
   .asset-detail-layout {
     gap: 14px;
+  }
+
+  .goal-card-grid,
+  .asset-portfolio-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 11px;
   }
 
   .planner-card,
@@ -1424,6 +1790,20 @@ input[type="radio"] {
 }
 
 @media (max-width: 420px) {
+  .goal-list-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .goal-add-button {
+    width: 100%;
+  }
+
+  .goal-list-card,
+  .asset-portfolio-card {
+    padding: 14px;
+  }
+
   .asset-summary-card {
     min-height: 76px;
   }
