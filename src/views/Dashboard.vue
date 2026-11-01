@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useBudgetStore } from "@/stores/budget";
 import { useGoalStore } from "@/stores/goal";
 import { formatRupiah } from "@/utils/formatters";
+import { compareDecimal } from "@/utils/decimal";
 import VueApexCharts from "@/lib/charts";
 import {
   Plus,
@@ -54,6 +55,12 @@ const {
 const { goals, isLoading: isLoadingGoals } = storeToRefs(goalStore);
 
 const recentTransactions = ref([]);
+const netWorth = ref({
+  cash_total: "0.00",
+  investment_total: "0.00",
+  investment_in_transit: "0.00",
+  total_assets: "0.00",
+});
 const balanceVisible = ref(
   localStorage.getItem("ledger:balance-visible") !== "false",
 );
@@ -196,9 +203,19 @@ async function refreshDashboard() {
       fetchCashFlowData(),
       budgetStore.fetchBudgets(localMonth()),
       goalStore.fetchGoals(),
+      fetchNetWorthData(),
     ]);
   } finally {
     refreshing = false;
+  }
+}
+
+async function fetchNetWorthData() {
+  try {
+    const response = await api.get("/api/reports/net-worth");
+    netWorth.value = response.data.data;
+  } catch (err) {
+    console.warn("Gagal memuat total aset:", err.message);
   }
 }
 onMounted(() => {
@@ -376,6 +393,20 @@ async function fetchCashFlowData() {
           <p>Selisih Kas</p>
           <strong>{{ privateMoney(monthlySavings) }}</strong>
           <div class="bank-metric-foot">Pemasukan dikurangi pengeluaran</div>
+        </article>
+        <article class="bank-metric-card wealth">
+          <div class="bank-metric-head">
+            <span><Wallet /></span><small>Kas + investasi</small>
+          </div>
+          <p>Total aset terpantau</p>
+          <strong>{{ privateMoney(netWorth.total_assets) }}</strong>
+          <div class="bank-metric-foot">
+            Kas {{ privateMoney(netWorth.cash_total) }} · Investasi
+            {{ privateMoney(netWorth.investment_total) }}
+            <template v-if="compareDecimal(netWorth.investment_in_transit, '0.00') > 0">
+              · termasuk {{ privateMoney(netWorth.investment_in_transit) }} diproses
+            </template>
+          </div>
         </article>
       </div>
     </section>

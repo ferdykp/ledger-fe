@@ -630,9 +630,6 @@ table {
   background: var(--color-paper-0);
   box-shadow: 0 5px 22px rgba(20, 20, 43, 0.035);
 }
-.bank-metric-card.savings {
-  grid-column: 1/-1;
-}
 .bank-metric-head {
   display: flex;
   align-items: center;
@@ -1058,9 +1055,6 @@ table {
   }
   .bank-metrics {
     grid-template-columns: 1fr 1fr;
-  }
-  .bank-metric-card.savings {
-    grid-column: 1/-1;
   }
   .bank-metric-card {
     padding: 16px;

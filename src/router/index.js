@@ -14,7 +14,7 @@ const Account = () => import("../views/Account.vue");
 const Category = () => import("../views/Category.vue");
 const TransactionHistory = () => import("../views/TransactionHistory.vue");
 const Budget = () => import("../views/Budget.vue");
-const Goal = () => import("../views/Goal.vue");
+const Goal = () => import("../views/FinancialWorkspace.vue");
 const Report = () => import("../views/Report.vue");
 const Settings = () => import("../views/Settings.vue");
 const SmartImport = () => import("../views/SmartImport.vue");

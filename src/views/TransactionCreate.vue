@@ -66,8 +66,11 @@ const form = ref({
   account_id: "",
   to_account_id: "",
   date: localDate(),
-  note: "",
+  note: route.query.note || "",
+  goal_obligation_id: route.query.goal_obligation_id || null,
+  idempotency_key: null,
 });
+watch(() => [form.value.type, form.value.amount, form.value.account_id, form.value.to_account_id, form.value.category_id, form.value.date, form.value.note, form.value.goal_obligation_id], () => { form.value.idempotency_key = null; });
 
 // Form State Quick Add Category
 const newCategoryForm = ref({
@@ -212,6 +215,7 @@ onMounted(async () => {
         to_account_id: tx.related_account_id || "",
         date: tx.date,
         note: tx.note || "",
+        goal_obligation_id: tx.goal_obligation_id || null,
       };
     } catch (err) {
       notifyStore.notify({
@@ -372,6 +376,11 @@ async function handleSubmit() {
     return;
   }
   const payload = { ...form.value };
+  if (!payload.goal_obligation_id) delete payload.goal_obligation_id;
+  if (!isEditMode.value && !payload.idempotency_key) {
+    payload.idempotency_key = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    form.value.idempotency_key = payload.idempotency_key;
+  }
   if (payload.type === "transfer") payload.category_id = null;
   else payload.to_account_id = null;
   const category = categories.value.find(

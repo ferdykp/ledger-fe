@@ -8,6 +8,8 @@ test("rupiah uses Rp, Indonesian grouping, and preserves cents and signs", () =>
     [0, "Rp 0"],
     [1250000, "Rp 1.250.000"],
     ["1250000.50", "Rp 1.250.000,5"],
+    ["9007199254740993.01", "Rp 9.007.199.254.740.993,01"],
+    ["999.999999", "Rp 1.000"],
     [-35000, "-Rp 35.000"],
     [null, "Rp 0"],
     [NaN, "Rp 0"],
