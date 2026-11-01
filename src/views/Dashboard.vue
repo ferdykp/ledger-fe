@@ -403,8 +403,11 @@ async function fetchCashFlowData() {
           <div class="bank-metric-foot">
             Kas {{ privateMoney(netWorth.cash_total) }} · Investasi
             {{ privateMoney(netWorth.investment_total) }}
-            <template v-if="compareDecimal(netWorth.investment_in_transit, '0.00') > 0">
-              · termasuk {{ privateMoney(netWorth.investment_in_transit) }} diproses
+            <template
+              v-if="compareDecimal(netWorth.investment_in_transit, '0.00') > 0"
+            >
+              · termasuk
+              {{ privateMoney(netWorth.investment_in_transit) }} diproses
             </template>
           </div>
         </article>
