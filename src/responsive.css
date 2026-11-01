@@ -965,6 +965,86 @@ input[type="radio"] {
   line-height: 0.8;
 }
 
+.workspace-detail-toolbar {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.workspace-delete-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--color-expense-600) 30%,
+    var(--color-line-200)
+  );
+  border-radius: 12px;
+  color: var(--color-expense-600);
+  background: var(--color-paper-0);
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.workspace-delete-button:hover:not(:disabled),
+.workspace-delete-confirm:hover:not(:disabled) {
+  border-color: var(--color-expense-600);
+  color: #fff;
+  background: var(--color-expense-600);
+}
+
+.workspace-delete-button:disabled,
+.workspace-delete-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.workspace-delete-hint {
+  margin: -4px 0 0;
+  color: var(--color-ink-500);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace-delete-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 15px;
+  color: var(--color-expense-600);
+  background: var(--color-expense-100);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.workspace-delete-confirm {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-expense-600);
+  border-radius: 12px;
+  color: #fff;
+  background: var(--color-expense-600);
+  font-size: 13px;
+  font-weight: 750;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
 .planner-card,
 .goal-detail-card,
 .goal-funding-card,
@@ -1608,6 +1688,24 @@ input[type="radio"] {
 .dark .asset-type-mark.is-gold {
   color: #f5cc69;
   background: #493a19;
+}
+
+.dark .workspace-delete-button:hover:not(:disabled) {
+  border-color: var(--color-expense-600);
+  color: var(--color-expense-600);
+  background: var(--color-expense-100);
+}
+
+.dark .workspace-delete-confirm {
+  border-color: #b84f55;
+  color: #fff;
+  background: #84353a;
+}
+
+.dark .workspace-delete-confirm:hover:not(:disabled) {
+  border-color: #a34349;
+  color: #fff;
+  background: #a34349;
 }
 
 @media (min-width: 1180px) {

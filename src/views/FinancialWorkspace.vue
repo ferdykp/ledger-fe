@@ -19,6 +19,9 @@ const notify = useNotificationStore();
 const tab = ref("goals");
 const showGoalForm = ref(false);
 const showAssetForm = ref(false);
+const deleteConfirmation = ref(null);
+const isDeletingRecord = ref(false);
+const deleteError = ref("");
 const goals = ref([]);
 const accounts = ref([]);
 const assets = ref([]);
@@ -124,6 +127,9 @@ const selectedAsset = computed(
   () =>
     assets.value.find((asset) => asset.id === selectedAssetId.value) || null,
 );
+const selectedAssetHasHistory = computed(
+  () => Boolean(selectedAsset.value?.transactions?.length),
+);
 const accountChoices = computed(() =>
   accounts.value.filter((account) => !account.is_archived),
 );
@@ -173,6 +179,63 @@ function backToGoalList() {
 }
 function backToAssetList() {
   selectedAssetId.value = null;
+}
+function requestDelete(type, item) {
+  deleteError.value = "";
+  deleteConfirmation.value = {
+    type,
+    id: item.id,
+    name: item.name,
+  };
+}
+function closeDeleteConfirmation() {
+  if (isDeletingRecord.value) return;
+  deleteConfirmation.value = null;
+  deleteError.value = "";
+}
+async function deleteSelectedRecord() {
+  const record = deleteConfirmation.value;
+  if (!record || isDeletingRecord.value) return;
+
+  isDeletingRecord.value = true;
+  deleteError.value = "";
+  try {
+    const endpoint =
+      record.type === "goal"
+        ? `/api/goals/${record.id}`
+        : `/api/assets/${record.id}`;
+    await api.delete(endpoint);
+
+    if (record.type === "goal") {
+      selectedGoalId.value = null;
+      funding.value = null;
+      contributions.value = [];
+      cashHistory.value = [];
+      contributionNextPage.value = null;
+      contributionHasMore.value = false;
+    } else {
+      selectedAssetId.value = null;
+    }
+
+    deleteConfirmation.value = null;
+    notify.notify({
+      message:
+        record.type === "goal"
+          ? "Target berhasil dihapus."
+          : "Aset berhasil dihapus.",
+      type: "success",
+    });
+    await fetchAll();
+  } catch (err) {
+    deleteError.value = normalizeError(
+      err,
+      record.type === "goal"
+        ? "Target belum dapat dihapus. Coba lagi."
+        : "Aset yang memiliki riwayat transaksi atau alokasi tidak dapat dihapus.",
+    );
+  } finally {
+    isDeletingRecord.value = false;
+  }
 }
 function addTemplate(name) {
   goalForm.value.name = name === "Custom" ? "" : name;
@@ -944,13 +1007,23 @@ onMounted(async () => {
         </div>
 
         <div v-if="selectedGoal" class="goal-detail-layout">
-          <button
-            type="button"
-            class="workspace-back-button"
-            @click="backToGoalList"
-          >
-            <span aria-hidden="true">‹</span> Semua target
-          </button>
+          <div class="workspace-detail-toolbar">
+            <button
+              type="button"
+              class="workspace-back-button"
+              @click="backToGoalList"
+            >
+              <span aria-hidden="true">‹</span> Semua target
+            </button>
+            <button
+              type="button"
+              class="workspace-delete-button"
+              :aria-label="`Hapus target ${selectedGoal.name}`"
+              @click="requestDelete('goal', selectedGoal)"
+            >
+              Hapus target
+            </button>
+          </div>
           <section class="surface-card goal-funding-card">
             <div
               class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -1522,13 +1595,33 @@ onMounted(async () => {
           </article>
         </div>
         <div v-if="selectedAsset" class="asset-detail-layout">
-          <button
-            type="button"
-            class="workspace-back-button"
-            @click="backToAssetList"
-          >
-            <span aria-hidden="true">‹</span> Semua aset
-          </button>
+          <div class="workspace-detail-toolbar">
+            <button
+              type="button"
+              class="workspace-back-button"
+              @click="backToAssetList"
+            >
+              <span aria-hidden="true">‹</span> Semua aset
+            </button>
+            <button
+              type="button"
+              class="workspace-delete-button"
+              :disabled="selectedAssetHasHistory"
+              :aria-label="`Hapus aset ${selectedAsset.name}`"
+              :title="
+                selectedAssetHasHistory
+                  ? 'Aset dengan riwayat transaksi atau alokasi tidak dapat dihapus'
+                  : 'Hapus aset'
+              "
+              @click="requestDelete('asset', selectedAsset)"
+            >
+              Hapus aset
+            </button>
+          </div>
+          <p v-if="selectedAssetHasHistory" class="workspace-delete-hint">
+            Aset ini memiliki riwayat transaksi atau alokasi, sehingga tidak
+            dapat dihapus.
+          </p>
           <section class="surface-card asset-detail-card">
             <div class="asset-detail-heading">
               <div>
@@ -1978,5 +2071,63 @@ onMounted(async () => {
         </div>
       </section>
     </template>
+
+    <div
+      v-if="deleteConfirmation"
+      v-dialog="closeDeleteConfirmation"
+      class="dialog-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-ink-900/45 p-4 backdrop-blur-sm"
+      @click.self="closeDeleteConfirmation"
+    >
+      <section
+        class="w-full max-w-md overflow-hidden rounded-3xl border border-line-200 bg-paper-0 shadow-card"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-record-title"
+        aria-describedby="delete-record-description"
+      >
+        <div class="p-5 sm:p-6">
+          <span class="workspace-delete-icon" aria-hidden="true">!</span>
+          <h2 id="delete-record-title" class="mt-4 text-lg font-bold text-ink-900">
+            Hapus {{ deleteConfirmation.type === "goal" ? "target" : "aset" }}?
+          </h2>
+          <p class="mt-2 break-words text-sm font-semibold text-ink-800">
+            {{ deleteConfirmation.name }}
+          </p>
+          <p id="delete-record-description" class="mt-2 text-sm leading-6 text-ink-600">
+            <template v-if="deleteConfirmation.type === 'goal'">
+              Target, rincian kebutuhan, jadwal pembayaran, riwayat setoran,
+              serta alokasi kas/aset khusus target akan dihapus. Transaksi
+              pembayaran yang sudah tercatat tetap tersimpan dan saldo rekening
+              tidak berubah.
+            </template>
+            <template v-else>
+              Data aset dan valuasinya akan dihapus. Aset dengan riwayat transaksi
+              atau alokasi tidak dapat dihapus.
+            </template>
+          </p>
+          <p v-if="deleteError" role="alert" class="mt-3 text-sm font-semibold text-expense-600">
+            {{ deleteError }}
+          </p>
+        </div>
+        <div class="flex flex-col-reverse gap-2 border-t border-line-200 bg-base-50 p-4 sm:flex-row sm:justify-end sm:px-6">
+          <button
+            type="button"
+            class="secondary-button px-4"
+            :disabled="isDeletingRecord"
+            @click="closeDeleteConfirmation"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            class="workspace-delete-confirm px-4"
+            :disabled="isDeletingRecord"
+            @click="deleteSelectedRecord"
+          >
+            {{ isDeletingRecord ? "Menghapus…" : "Ya, hapus" }}
+          </button>
+        </div>
+      </section>
+    </div>
   </main>
 </template>
