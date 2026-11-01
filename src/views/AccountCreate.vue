@@ -28,6 +28,7 @@ const isLoading = ref(false);
 const form = ref({
   name: "",
   type: "bank", // 'cash' | 'bank' | 'ewallet' | 'credit_card'
+  purpose: "operational",
   balance: 0,
   color: "#6C4CF1",
   icon: "building-bank",
@@ -51,11 +52,16 @@ const colorSwatches = [
   "#EC4899", // Pink
 ];
 
+function selectAccountType(type) {
+  form.value.type = type;
+  if (type === "credit_card") form.value.purpose = "operational";
+}
+
 // Formatter Tampilan Input Nominal
 const formattedBalance = computed({
   get: () => (form.value.balance ? form.value.balance : ""),
   set(newValue) {
-    form.value.balance = newValue ? Number(newValue) : 0;
+    form.value.balance = newValue ? String(newValue) : "0";
   },
 });
 
@@ -141,7 +147,7 @@ async function handleSubmit() {
               v-for="item in accountTypes"
               :key="item.id"
               type="button"
-              @click="form.type = item.id"
+              @click="selectAccountType(item.id)"
               class="flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border text-xs font-semibold transition-all cursor-pointer btn-bounce"
               :class="
                 form.type === item.id
@@ -153,6 +159,38 @@ async function handleSubmit() {
               <span>{{ item.label }}</span>
             </button>
           </div>
+        </div>
+
+        <div v-if="form.type !== 'credit_card'" class="space-y-3">
+          <label
+            class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+          >
+            FUNGSI AKUN
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="item in [
+                { id: 'operational', label: 'Operasional' },
+                { id: 'savings', label: 'Tabungan' },
+              ]"
+              :key="item.id"
+              type="button"
+              class="rounded-xl border px-3 py-3 text-sm font-semibold transition-colors"
+              :class="
+                form.purpose === item.id
+                  ? 'border-primary-600 bg-primary-100 text-primary-700'
+                  : 'border-line-200 bg-paper-0 text-ink-600'
+              "
+              :aria-pressed="form.purpose === item.id"
+              @click="form.purpose = item.id"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+          <p class="text-xs text-ink-500">
+            Akun tabungan dipisahkan dari kas yang tersedia untuk kebutuhan
+            harian.
+          </p>
         </div>
 
         <!-- Nama Dompet -->

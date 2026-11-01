@@ -44,7 +44,7 @@ const authStore = useAuthStore();
 const budgetStore = useBudgetStore();
 const goalStore = useGoalStore();
 
-const { totalBalance } = storeToRefs(accountStore);
+const { cashAvailableTotal, savingsCashTotal } = storeToRefs(accountStore);
 const {
   budgets,
   isLoading: isLoadingBudget,
@@ -61,6 +61,7 @@ const netWorth = ref({
   investment_in_transit: "0.00",
   total_assets: "0.00",
 });
+const goalFundingSummaries = ref([]);
 const balanceVisible = ref(
   localStorage.getItem("ledger:balance-visible") !== "false",
 );
@@ -143,7 +144,18 @@ const topSpendingCategory = computed(
 
 // 5. Goal prioritas — REAL, dari goal store (progress_percent & remaining_amount
 // sudah dihitung backend, sama seperti priorityGoal di Goal.vue)
-const activeGoal = computed(() => goals.value[0] || null);
+const activeGoal = computed(() => {
+  const goal = goals.value[0];
+  if (!goal) return null;
+  const funding = goalFundingSummaries.value.find(
+    (entry) => Number(entry.goal_id) === Number(goal.id),
+  );
+  return {
+    ...goal,
+    progress_percent: funding?.funding_coverage_percent ?? 0,
+    funding_coverage: funding?.funding_coverage ?? "0.00",
+  };
+});
 
 // Apex chart config: Arus Kas 6 Bulan Terakhir
 const cashFlowSeries = computed(() => [
@@ -199,14 +211,28 @@ async function refreshDashboard() {
   try {
     await Promise.all([
       accountStore.fetchAccounts(),
+      accountStore.fetchAllocationSummary(),
       fetchTransactionsData(),
       fetchCashFlowData(),
       budgetStore.fetchBudgets(localMonth()),
       goalStore.fetchGoals(),
       fetchNetWorthData(),
+      fetchGoalFundingSummaries(),
     ]);
   } finally {
     refreshing = false;
+  }
+}
+
+async function fetchGoalFundingSummaries() {
+  try {
+    const response = await api.get("/api/goals/funding-summary");
+    goalFundingSummaries.value = Array.isArray(response.data.data)
+      ? response.data.data
+      : [];
+  } catch (err) {
+    console.warn("Gagal memuat pendanaan target:", err.message);
+    goalFundingSummaries.value = [];
   }
 }
 
@@ -320,8 +346,8 @@ async function fetchCashFlowData() {
       <article class="bank-balance-card">
         <div class="bank-balance-top">
           <div>
-            <span class="bank-card-label">TOTAL SALDO</span
-            ><span class="bank-live-pill"><i></i> Semua akun</span>
+            <span class="bank-card-label">KAS TERSEDIA</span
+            ><span class="bank-live-pill"><i></i> Akun operasional</span>
           </div>
           <button
             class="bank-eye"
@@ -343,12 +369,10 @@ async function fetchCashFlowData() {
           class="bank-main-balance"
           :class="{ 'bank-masked': !balanceVisible }"
         >
-          {{ privateMoney(totalBalance) }}
+          {{ privateMoney(cashAvailableTotal) }}
         </div>
         <div class="bank-balance-meta">
-          <span
-            >Saldo tersedia dari
-            {{ accountStore.accounts?.length || 0 }} akun</span
+          <span>Di luar dana yang dialokasikan ke target</span
           ><router-link to="/accounts"
             >Kelola akun <ChevronRight class="w-4 h-4"
           /></router-link>
@@ -393,6 +417,16 @@ async function fetchCashFlowData() {
           <p>Selisih Kas</p>
           <strong>{{ privateMoney(monthlySavings) }}</strong>
           <div class="bank-metric-foot">Pemasukan dikurangi pengeluaran</div>
+        </article>
+        <article class="bank-metric-card savings">
+          <div class="bank-metric-head">
+            <span><Target /></span><small>Kas disisihkan</small>
+          </div>
+          <p>Tabungan kas</p>
+          <strong>{{ privateMoney(savingsCashTotal) }}</strong>
+          <div class="bank-metric-foot">
+            Akun tabungan dan alokasi target dari akun operasional
+          </div>
         </article>
         <article class="bank-metric-card wealth">
           <div class="bank-metric-head">

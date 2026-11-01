@@ -2,18 +2,70 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import api from "@/lib/axios";
+import { addDecimal, compareDecimal } from "@/utils/decimal";
 
 export const useAccountStore = defineStore("account", () => {
   const accounts = ref([]);
+  const allocationSummary = ref([]);
+  const allocationSummaryLoaded = ref(false);
   const isLoading = ref(false);
 
   // Menghitung total saldo (dipastikan konversi ke Number/parseFloat)
   const totalBalance = computed(() => {
-    return accounts.value.reduce((total, acc) => {
-      const val = parseFloat(acc.balance);
-      return total + (isNaN(val) ? 0 : val);
-    }, 0);
+    return accounts.value
+      .filter(
+        (account) =>
+          !account.is_archived &&
+          ["cash", "bank", "ewallet"].includes(account.type),
+      )
+      .reduce(
+        (total, account) => addDecimal(total, account.balance || "0"),
+        "0.00",
+      );
   });
+  const cashAvailableTotal = computed(() =>
+    allocationSummaryLoaded.value
+      ? accounts.value
+          .filter(
+            (account) =>
+              !account.is_archived &&
+              account.purpose !== "savings" &&
+              ["cash", "bank", "ewallet"].includes(account.type),
+          )
+          .reduce((total, account) => {
+            const summary = allocationSummary.value.find(
+              (entry) => Number(entry.account_id) === Number(account.id),
+            );
+            const available = summary?.unallocated ?? account.balance ?? "0";
+            return addDecimal(
+              total,
+              compareDecimal(available, "0.00") > 0 ? available : "0.00",
+            );
+          }, "0.00")
+      : "0.00",
+  );
+  const savingsCashTotal = computed(() =>
+    accounts.value
+      .filter(
+        (account) =>
+          !account.is_archived &&
+          ["cash", "bank", "ewallet"].includes(account.type),
+      )
+      .reduce((total, account) => {
+        const summary = allocationSummary.value.find(
+          (entry) => Number(entry.account_id) === Number(account.id),
+        );
+        const balance =
+          compareDecimal(account.balance || "0", "0.00") > 0
+            ? account.balance
+            : "0.00";
+        const saved =
+          account.purpose === "savings"
+            ? balance
+            : (summary?.allocated ?? "0.00");
+        return addDecimal(total, saved);
+      }, "0.00"),
+  );
 
   // Ambil daftar akun dari backend Laravel
   async function fetchAccounts() {
@@ -32,6 +84,20 @@ export const useAccountStore = defineStore("account", () => {
       console.warn("Gagal memuat akun:", error.message);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  async function fetchAllocationSummary() {
+    try {
+      const response = await api.get("/api/cash-allocations/accounts");
+      allocationSummary.value = Array.isArray(response.data.data)
+        ? response.data.data
+        : [];
+      allocationSummaryLoaded.value = true;
+    } catch (error) {
+      console.warn("Gagal memuat alokasi kas:", error.message);
+      allocationSummary.value = [];
+      allocationSummaryLoaded.value = false;
     }
   }
 
@@ -62,9 +128,14 @@ export const useAccountStore = defineStore("account", () => {
 
   return {
     accounts,
+    allocationSummary,
+    allocationSummaryLoaded,
     totalBalance,
+    cashAvailableTotal,
+    savingsCashTotal,
     isLoading,
     fetchAccounts,
+    fetchAllocationSummary,
     addAccount,
     updateAccount,
     deleteAccount,

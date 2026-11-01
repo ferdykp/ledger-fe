@@ -35,6 +35,7 @@ const editForm = ref({
   id: null,
   name: "",
   type: "bank",
+  purpose: "operational",
   balance: 0,
   color: "#6C4CF1",
 });
@@ -165,7 +166,7 @@ async function handleDelete() {
         <span
           class="text-[11px] font-bold text-ink-300 uppercase tracking-wider block"
         >
-          TOTAL SALDO
+          TOTAL KAS
         </span>
         <span
           class="font-mono-money font-extrabold text-2xl md:text-3xl text-violet-600"
@@ -228,6 +229,15 @@ async function handleDelete() {
                 >
                   {{ acc.name }}
                 </h3>
+                <span
+                  v-if="acc.type !== 'credit_card'"
+                  class="account-purpose-badge"
+                  :class="
+                    acc.purpose === 'savings' ? 'is-savings' : 'is-operational'
+                  "
+                >
+                  {{ acc.purpose === "savings" ? "Tabungan" : "Operasional" }}
+                </span>
                 <span class="text-xs text-ink-600 capitalize font-medium">
                   {{ acc.type }}
                 </span>
@@ -381,6 +391,36 @@ async function handleDelete() {
               placeholder="Contoh: BCA Utama"
               class="w-full px-4 h-12 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-sm font-medium text-ink-900"
             />
+          </div>
+
+          <div v-if="editForm.type !== 'credit_card'" class="space-y-3">
+            <label
+              class="block text-[11px] font-bold text-ink-300 uppercase tracking-wider"
+              >FUNGSI AKUN</label
+            >
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="item in [
+                  { id: 'operational', label: 'Operasional' },
+                  { id: 'savings', label: 'Tabungan' },
+                ]"
+                :key="item.id"
+                type="button"
+                class="rounded-xl border px-3 py-3 text-sm font-semibold transition-colors"
+                :class="
+                  editForm.purpose === item.id
+                    ? 'border-primary-600 bg-primary-100 text-primary-700'
+                    : 'border-line-200 bg-paper-0 text-ink-600'
+                "
+                :aria-pressed="editForm.purpose === item.id"
+                @click="editForm.purpose = item.id"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+            <p class="text-xs text-ink-500">
+              Tabungan tidak dihitung sebagai kas harian yang tersedia.
+            </p>
           </div>
 
           <div class="space-y-2">
