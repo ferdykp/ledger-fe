@@ -29,7 +29,7 @@ import {
   Plane,
   Receipt,
   AlertTriangle,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import api from "@/lib/axios";
 
 const router = useRouter();

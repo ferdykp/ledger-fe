@@ -21,7 +21,7 @@ import {
   X,
   Loader2,
   AlertTriangle,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 const budgetStore = useBudgetStore();
 const categoryStore = useCategoryStore();

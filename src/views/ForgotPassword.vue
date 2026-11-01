@@ -2,7 +2,7 @@
 import AuthLayout from "@/components/AuthLayout.vue";
 import { ref } from "vue";
 import api from "@/lib/axios";
-import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-vue-next";
+import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "@lucide/vue";
 const email = ref("");
 const loading = ref(false);
 const sent = ref(false);

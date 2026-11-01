@@ -25,7 +25,7 @@ import {
   Calendar,
   AlertTriangle,
   TrendingUp,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 const goalStore = useGoalStore();
 const notifyStore = useNotificationStore();

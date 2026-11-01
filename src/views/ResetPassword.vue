@@ -3,7 +3,7 @@ import AuthLayout from "@/components/AuthLayout.vue";
 import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "@/lib/axios";
-import { Lock, Loader2 } from "lucide-vue-next";
+import { Lock, Loader2 } from "@lucide/vue";
 const route = useRoute(),
   router = useRouter();
 const email = ref(route.query.email || "");

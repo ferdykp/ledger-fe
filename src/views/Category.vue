@@ -21,7 +21,7 @@ import {
   Check,
   AlertTriangle,
   Loader2,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 const categoryStore = useCategoryStore();
 const notifyStore = useNotificationStore();

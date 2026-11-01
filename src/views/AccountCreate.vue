@@ -13,7 +13,7 @@ import {
   CreditCard,
   Check,
   Loader2,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 // Define Emits untuk penanganan saat digunakan sebagai Modal
 const emit = defineEmits(["close", "created"]);

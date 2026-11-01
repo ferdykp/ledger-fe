@@ -1,7 +1,7 @@
 <!-- ledger-web/src/components/PwaInstallPrompt.vue -->
 <script setup>
 import { ref, onMounted } from "vue";
-import { Download, X } from "lucide-vue-next";
+import { Download, X } from "@lucide/vue";
 
 const deferredPrompt = ref(null);
 const showPrompt = ref(false);

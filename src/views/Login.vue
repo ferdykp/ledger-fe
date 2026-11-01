@@ -4,7 +4,7 @@ import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useNotificationStore } from "../stores/notification";
-import { Mail, Lock, Eye, EyeOff } from "lucide-vue-next";
+import { Mail, Lock, Eye, EyeOff } from "@lucide/vue";
 
 const router = useRouter();
 const route = useRoute();

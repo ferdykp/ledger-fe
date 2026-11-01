@@ -10,7 +10,7 @@ import {
   X,
   Repeat2,
   Bell,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import { formatRupiah } from "@/utils/formatters";
 const {
   bills,

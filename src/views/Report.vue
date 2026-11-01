@@ -11,7 +11,7 @@ import {
   LoaderCircle,
   AlertCircle,
   ArrowRight,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import VueApexCharts from "@/lib/charts";
 import api from "@/lib/axios";
 import { formatRupiah } from "@/utils/formatters";

@@ -20,7 +20,7 @@ import {
   Loader2,
   X,
   Check,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 const accountStore = useAccountStore();
 const notifyStore = useNotificationStore();

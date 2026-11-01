@@ -36,7 +36,7 @@ import {
   Send,
   ChevronRight,
   Sparkles,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import api from "@/lib/axios";
 
 const accountStore = useAccountStore();

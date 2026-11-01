@@ -31,7 +31,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 import api from "@/lib/axios";
 import { useTransactionExport } from "@/composables/useTransactionExport";

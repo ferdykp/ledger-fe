@@ -19,7 +19,7 @@ import {
   Tags,
   ChevronRight,
   MessageCircle,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 const auth = useAuthStore();
 const route = useRoute();
 const more = ref(false);

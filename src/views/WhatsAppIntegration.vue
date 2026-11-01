@@ -15,7 +15,7 @@ import {
   LockKeyhole,
   ArrowLeft,
   Copy,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import api from "@/lib/axios";
 import { useNotificationStore } from "@/stores/notification";
 

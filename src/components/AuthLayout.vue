@@ -1,6 +1,6 @@
 <script setup>
 import BrandMark from "@/components/BrandMark.vue";
-import { ArrowUpRight, Check } from "lucide-vue-next";
+import { ArrowUpRight, Check } from "@lucide/vue";
 </script>
 <template>
   <main class="auth-layout">
