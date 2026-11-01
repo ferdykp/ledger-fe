@@ -94,7 +94,6 @@ const assetForm = ref({
   ownership_source: "",
   initial_quantity: "",
   initial_cost_basis: "",
-  initial_unit_price: "",
   initial_date: localDate(),
 });
 const assetTrade = ref({
@@ -293,10 +292,10 @@ const effectivePriceUnit = computed(() =>
 );
 const tradePreview = computed(() => {
   const { amount, quantity, unit_price } = assetTrade.value;
-  const calcMode =
-    selectedAsset.value?.type === "rdpu"
-      ? "by_amount"
-      : assetTrade.value.calc_mode;
+  if (selectedAsset.value?.type === "rdpu") {
+    return { quantity: "0", amount: String(amount || "0") };
+  }
+  const calcMode = assetTrade.value.calc_mode;
   const priceUnit =
     selectedAsset.value?.type === "gold"
       ? effectivePriceUnit.value || "1"
@@ -351,12 +350,10 @@ async function fetchAll() {
 }
 
 function onAssetTradeTypeChange() {
-  if (selectedAsset.value?.type === "rdpu") {
-    assetTrade.value.calc_mode = "by_amount";
-    if (!assetTrade.value.unit_price && selectedAsset.value.latest_price) {
-      assetTrade.value.unit_price = selectedAsset.value.latest_price;
-    }
-  }
+  if (selectedAsset.value?.type === "gold") return;
+  assetTrade.value.calc_mode = "";
+  assetTrade.value.unit_price = "";
+  assetTrade.value.quantity = "";
 }
 
 async function fetchGoalDetails() {
@@ -411,7 +408,10 @@ watch(selectedAssetId, () => {
   if (selectedAsset.value)
     pendingForm.value = {
       quantity: selectedAsset.value.quantity,
-      unit_price: selectedAsset.value.latest_price || "",
+      unit_price:
+        selectedAsset.value.type === "gold"
+          ? selectedAsset.value.latest_price || ""
+          : "",
       amount: "",
       fees: "0",
       cash_account_id: "",
@@ -656,7 +656,6 @@ async function createAsset() {
       ownership_source: "",
       initial_quantity: "",
       initial_cost_basis: "",
-      initial_unit_price: "",
       initial_date: localDate(),
     };
     await refreshAll();
@@ -671,11 +670,15 @@ async function createAsset() {
 async function recordTrade() {
   if (busy.value || !selectedAsset.value) return;
   if (
-    compareDecimal(tradePreview.value.quantity, "0.00000000", 8) <= 0 ||
-    compareDecimal(tradePreview.value.amount, "0.00") <= 0
+    compareDecimal(tradePreview.value.amount, "0.00") <= 0 ||
+    (selectedAsset.value.type === "gold" &&
+      compareDecimal(tradePreview.value.quantity, "0.00000000", 8) <= 0)
   ) {
     notify.notify({
-      message: "Isi nominal dan harga/NAB transaksi yang valid.",
+      message:
+        selectedAsset.value.type === "rdpu"
+          ? "Isi nominal transaksi yang valid."
+          : "Isi nominal dan jumlah gram transaksi yang valid.",
       type: "error",
     });
     return;
@@ -684,7 +687,6 @@ async function recordTrade() {
   try {
     const payload = {
       ...assetTrade.value,
-      quantity: tradePreview.value.quantity,
       amount: tradePreview.value.amount,
       price_unit_grams:
         selectedAsset.value.type === "gold"
@@ -703,6 +705,13 @@ async function recordTrade() {
           ? "settled"
           : assetTrade.value.status,
     };
+    if (selectedAsset.value.type === "gold") {
+      payload.quantity = tradePreview.value.quantity;
+    } else {
+      delete payload.quantity;
+      delete payload.unit_price;
+      delete payload.calc_mode;
+    }
     delete payload.calc_mode;
     if (payload.price_unit_grams === "custom")
       payload.price_unit_grams = customPriceUnit.value;
@@ -1669,7 +1678,11 @@ onMounted(async () => {
                   />
                 </label>
                 <label class="financial-field">
-                  Total modal perolehan
+                  {{
+                    assetForm.type === "rdpu"
+                      ? "Nilai portofolio saat mulai dicatat"
+                      : "Total modal perolehan"
+                  }}
                   <MoneyInput
                     v-model="assetForm.initial_cost_basis"
                     min="0.01"
@@ -1677,10 +1690,11 @@ onMounted(async () => {
                     placeholder="Contoh: 5000000"
                     required
                   />
-                  <small class="asset-opening-help"
-                    >Masukkan total harga perolehan. Nilai ini menjadi modal
-                    awal aset.</small
-                  >
+                  <small class="asset-opening-help">{{
+                    assetForm.type === "rdpu"
+                      ? "Nilai ini menjadi titik awal pemantauan. Perubahan nilai dihitung sejak aset mulai dicatat di Ledger."
+                      : "Masukkan total harga perolehan. Nilai ini menjadi modal awal aset."
+                  }}</small>
                 </label>
                 <label class="financial-field">
                   Tanggal saldo awal
@@ -1689,21 +1703,6 @@ onMounted(async () => {
                     type="date"
                     required
                   />
-                </label>
-                <label v-if="assetForm.type === 'rdpu'" class="financial-field">
-                  NAB rata-rata saat pembelian
-                  <MoneyInput
-                    v-model="assetForm.initial_unit_price"
-                    min="0.00000001"
-                    step="0.00000001"
-                    :precision="8"
-                    placeholder="Masukkan NAB rata-rata per unit"
-                    required
-                  />
-                  <small class="asset-opening-help"
-                    >Jumlah unit dihitung Ledger dari total modal ÷ NAB
-                    rata-rata.</small
-                  >
                 </label>
                 <p class="asset-opening-notice">
                   Saldo awal menambah kepemilikan dan modal aset, tanpa membuat
@@ -1778,18 +1777,33 @@ onMounted(async () => {
                   }}</b>
                 </div>
                 <div class="asset-portfolio-card-footer">
+                  <span>{{
+                    asset.type === "rdpu"
+                      ? `Modal tercatat ${formatRupiah(asset.cost_basis)}`
+                      : `${formatQuantity(asset.quantity)} ${asset.type === "gold" ? "gram" : "unit"}`
+                  }}</span>
                   <span
-                    >{{ formatQuantity(asset.quantity) }}
-                    {{ asset.type === "gold" ? "gram" : "unit" }}</span
-                  >
-                  <span
-                    v-if="asset.unrealized_profit_loss != null"
+                    v-if="
+                      asset.type === 'rdpu'
+                        ? asset.total_profit_loss != null
+                        : asset.unrealized_profit_loss != null
+                    "
                     :class="
-                      Number(asset.unrealized_profit_loss) >= 0
+                      Number(
+                        asset.type === 'rdpu'
+                          ? asset.total_profit_loss
+                          : asset.unrealized_profit_loss,
+                      ) >= 0
                         ? 'is-gain'
                         : 'is-loss'
                     "
-                    >{{ formatRupiah(asset.unrealized_profit_loss) }}</span
+                    >{{
+                      formatRupiah(
+                        asset.type === "rdpu"
+                          ? asset.total_profit_loss
+                          : asset.unrealized_profit_loss,
+                      )
+                    }}</span
                   >
                 </div>
                 <div class="asset-portfolio-card-open">
@@ -1837,11 +1851,14 @@ onMounted(async () => {
                 </p>
               </div>
               <div class="asset-detail-holding">
-                <b
-                  >{{ formatQuantity(selectedAsset.quantity) }}
-                  {{ selectedAsset.type === "gold" ? "gram" : "unit" }}</b
-                >
-                <p>Modal {{ formatRupiah(selectedAsset.cost_basis) }}</p>
+                <b>{{
+                  selectedAsset.type === "rdpu"
+                    ? `Modal tercatat ${formatRupiah(selectedAsset.cost_basis)}`
+                    : `${formatQuantity(selectedAsset.quantity)} ${selectedAsset.type === "gold" ? "gram" : "unit"}`
+                }}</b>
+                <p v-if="selectedAsset.type === 'gold'">
+                  Modal {{ formatRupiah(selectedAsset.cost_basis) }}
+                </p>
               </div>
             </div>
             <div class="asset-valuation-grid">
@@ -1857,23 +1874,32 @@ onMounted(async () => {
                 <small>{{
                   selectedAsset.type === "gold"
                     ? "Harga buyback/gram"
-                    : "NAB/unit"
-                }}</small
-                ><b>{{
-                  selectedAsset.latest_price
-                    ? formatRupiah(
-                        selectedAsset.latest_price,
-                        selectedAsset.type === "rdpu" ? 8 : 2,
-                      )
-                    : "Belum dicatat"
+                    : "Metode valuasi"
+                }}</small>
+                <b>{{
+                  selectedAsset.type === "gold"
+                    ? selectedAsset.latest_price
+                      ? formatRupiah(selectedAsset.latest_price)
+                      : "Belum dicatat"
+                    : "Manual"
                 }}</b>
               </div>
               <div>
-                <small>P/L belum terealisasi</small
+                <small>{{
+                  selectedAsset.type === "rdpu"
+                    ? "Untung/rugi sejak mulai dicatat"
+                    : "P/L belum terealisasi"
+                }}</small
                 ><b>{{
-                  selectedAsset.unrealized_profit_loss == null
+                  (selectedAsset.type === "rdpu"
+                    ? selectedAsset.total_profit_loss
+                    : selectedAsset.unrealized_profit_loss) == null
                     ? "—"
-                    : formatRupiah(selectedAsset.unrealized_profit_loss)
+                    : formatRupiah(
+                        selectedAsset.type === "rdpu"
+                          ? selectedAsset.total_profit_loss
+                          : selectedAsset.unrealized_profit_loss,
+                      )
                 }}</b>
               </div>
             </div>
@@ -1881,7 +1907,7 @@ onMounted(async () => {
               <summary>
                 {{
                   selectedAsset.type === "rdpu"
-                    ? "Perbarui NAB terbaru"
+                    ? "Perbarui nilai portofolio"
                     : "Perbarui harga buyback"
                 }}
               </summary>
@@ -1890,12 +1916,14 @@ onMounted(async () => {
                   >{{
                     selectedAsset.type === "gold"
                       ? "Harga buyback per gram"
-                      : "NAB terbaru per unit"
+                      : "Total nilai portofolio saat ini"
                   }}<MoneyInput
                     v-model="priceForm.price"
-                    min="0.00000001"
-                    step="0.00000001"
-                    :precision="8"
+                    :min="selectedAsset.type === 'gold' ? '0.00000001' : '0.01'"
+                    :step="
+                      selectedAsset.type === 'gold' ? '0.00000001' : '0.01'
+                    "
+                    :precision="selectedAsset.type === 'gold' ? 8 : 2"
                     required /></label
                 ><label class="financial-field"
                   >Tanggal valuasi<input
@@ -1909,7 +1937,7 @@ onMounted(async () => {
                 ><button class="primary-button" :disabled="busy">
                   {{
                     selectedAsset.type === "rdpu"
-                      ? "Simpan NAB terbaru"
+                      ? "Simpan nilai portofolio"
                       : "Simpan valuasi"
                   }}
                 </button>
@@ -1917,7 +1945,7 @@ onMounted(async () => {
               <p class="mt-2 text-xs text-ink-500">
                 {{
                   selectedAsset.type === "rdpu"
-                    ? "Ledger menghitung nilai pasar dan laba/rugi otomatis dari unit terkumpul × NAB terbaru yang Anda catat."
+                    ? "Masukkan nilai total yang terlihat di aplikasi investasi. Ledger menghitung perubahan terhadap modal tercatat."
                     : "Nilai estimasi mengikuti harga buyback terbaru yang Anda catat."
                 }}
               </p>
@@ -2054,22 +2082,16 @@ onMounted(async () => {
                         selectedAsset.type === 'gold' ? 'Gram' : 'Unit'
                       "
                   /></label>
-                  <label class="financial-field"
-                    >{{
-                      selectedAsset.type === "gold"
-                        ? "Harga satuan"
-                        : "NAB per unit"
+                  <label
+                    v-if="selectedAsset.type === 'gold'"
+                    class="financial-field"
+                    >{{ "Harga satuan"
                     }}<MoneyInput
                       v-model="assetTrade.unit_price"
                       min="0.00000001"
                       step="0.00000001"
                       :precision="8"
-                      :required="selectedAsset.type === 'rdpu'"
-                      :placeholder="
-                        selectedAsset.type === 'gold'
-                          ? 'Harga per satuan harga'
-                          : 'NAB per unit'
-                      "
+                      :placeholder="'Harga per satuan harga'"
                   /></label>
                   <label
                     v-if="selectedAsset.type === 'gold'"
@@ -2124,33 +2146,29 @@ onMounted(async () => {
                       type="checkbox"
                     />Dana sudah benar-benar keluar dari rekening</label
                   >
-                  <div class="asset-trade-preview">
-                    Pratinjau: {{ formatQuantity(tradePreview.quantity) }}
-                    {{ selectedAsset.type === "gold" ? "gram" : "unit" }} ·
-                    {{ formatRupiah(tradePreview.amount) }}
+                  <div
+                    v-if="selectedAsset.type === 'gold'"
+                    class="asset-trade-preview"
+                  >
+                    Pratinjau: {{ formatQuantity(tradePreview.quantity) }} gram
+                    · {{ formatRupiah(tradePreview.amount) }}
                     <span v-if="assetTrade.unit_price">
                       pada harga
-                      {{
-                        formatRupiah(
-                          assetTrade.unit_price,
-                          selectedAsset.type === "rdpu" ? 8 : 2,
-                        )
-                      }}
-                      /
-                      {{
-                        selectedAsset.type === "gold"
-                          ? `${effectivePriceUnit} gram`
-                          : "unit"
-                      }}</span
+                      {{ formatRupiah(assetTrade.unit_price) }}
+                      / {{ effectivePriceUnit }} gram</span
                     >
+                  </div>
+                  <div v-else class="asset-trade-preview">
+                    Nominal yang dicatat:
+                    {{ formatRupiah(tradePreview.amount) }}
                   </div>
                   <p
                     v-if="selectedAsset.type === 'rdpu'"
                     class="asset-opening-notice sm:col-span-2"
                   >
-                    Unit dihitung otomatis dari nominal ÷ NAB. Laba/rugi
-                    diperbarui otomatis setelah NAB terbaru dicatat pada valuasi
-                    aset.
+                    Catat nominal pembelian atau pencairan. Perbarui nilai total
+                    portofolio secara manual dari aplikasi investasi untuk
+                    melihat perubahan nilai.
                   </p>
                   <label class="financial-field sm:col-span-2"
                     >Catatan<input
@@ -2171,8 +2189,11 @@ onMounted(async () => {
             <article class="surface-card p-5">
               <h3 class="font-bold">Alokasikan aset ke target</h3>
               <p class="mt-1 text-xs text-ink-500">
-                Jumlah emas/unit dicadangkan untuk target; nilai Rupiah
-                mengikuti valuasi terbaru.
+                {{
+                  selectedAsset.type === "rdpu"
+                    ? "Nominal RDPU dicadangkan untuk target."
+                    : "Jumlah emas dicadangkan untuk target sesuai valuasi terbaru."
+                }}
               </p>
               <details class="workspace-form-disclosure">
                 <summary>Alokasikan aset ke target</summary>
@@ -2196,15 +2217,17 @@ onMounted(async () => {
                     </option></select
                   ><MoneyInput
                     v-model="assetAllocation.quantity"
-                    min="0.00000001"
-                    step="0.00000001"
-                    :precision="8"
-                    :show-prefix="false"
+                    :min="selectedAsset.type === 'rdpu' ? '0.01' : '0.00000001'"
+                    :step="
+                      selectedAsset.type === 'rdpu' ? '0.01' : '0.00000001'
+                    "
+                    :precision="selectedAsset.type === 'rdpu' ? 2 : 8"
+                    :show-prefix="selectedAsset.type === 'rdpu'"
                     required
                     aria-label="Jumlah aset untuk dialokasikan"
                     class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                     :placeholder="
-                      selectedAsset.type === 'gold' ? 'Gram' : 'Unit'
+                      selectedAsset.type === 'gold' ? 'Gram' : 'Nominal alokasi'
                     "
                   /><select
                     v-model="assetAllocation.action"
@@ -2224,12 +2247,17 @@ onMounted(async () => {
               </details>
               <div class="mt-4 rounded-xl bg-base-50 p-3 text-xs">
                 Dialokasikan:
-                <b
-                  >{{ formatQuantity(selectedAsset.allocated_quantity) }}
-                  {{ selectedAsset.type === "gold" ? "gram" : "unit" }}</b
-                >
+                <b>{{
+                  selectedAsset.type === "rdpu"
+                    ? formatRupiah(selectedAsset.manual_allocated)
+                    : `${formatQuantity(selectedAsset.allocated_quantity)} gram`
+                }}</b>
                 · Belum dialokasikan:
-                <b>{{ formatQuantity(selectedAsset.unallocated_quantity) }}</b>
+                <b>{{
+                  selectedAsset.type === "rdpu"
+                    ? formatRupiah(selectedAsset.manual_unallocated)
+                    : `${formatQuantity(selectedAsset.unallocated_quantity)} gram`
+                }}</b>
               </div>
               <div class="mt-4">
                 <h4 class="text-sm font-semibold">Riwayat aset</h4>
@@ -2243,9 +2271,14 @@ onMounted(async () => {
                     ><span>{{ tx.transaction_date }}</span>
                   </div>
                   <p class="mt-1">
-                    {{ formatQuantity(tx.quantity) }}
-                    {{ selectedAsset.type === "gold" ? "gram" : "unit" }} ·
-                    {{ formatRupiah(tx.amount) }}
+                    <template v-if="selectedAsset.type === 'rdpu'">
+                      {{ tx.type === "redemption" ? "Pencairan" : "Nominal" }}
+                      {{ formatRupiah(tx.amount) }}
+                    </template>
+                    <template v-else>
+                      {{ formatQuantity(tx.quantity) }} gram ·
+                      {{ formatRupiah(tx.amount) }}
+                    </template>
                     <span v-if="tx.fees"
                       >· biaya {{ formatRupiah(tx.fees) }}</span
                     >
@@ -2257,78 +2290,97 @@ onMounted(async () => {
                     v-if="tx.status === 'pending'"
                     class="mt-3 grid gap-2 sm:grid-cols-2"
                   >
-                    <template v-if="tx.type === 'redemption'"
-                      ><MoneyInput
-                        v-model="pendingForm.quantity"
-                        min="0.00000001"
-                        step="0.00000001"
-                        :precision="8"
-                        :show-prefix="false"
-                        class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
-                        aria-label="Jumlah unit aktual"
-                        placeholder="Unit dicairkan"
-                      /><MoneyInput
-                        v-model="pendingForm.amount"
-                        min="0.01"
-                        step="0.01"
-                        class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
-                        aria-label="Nominal pencairan"
-                        placeholder="0"
-                      /><select
+                    <MoneyInput
+                      v-if="
+                        tx.type === 'redemption' &&
+                        selectedAsset.type === 'gold'
+                      "
+                      v-model="pendingForm.quantity"
+                      min="0.00000001"
+                      step="0.00000001"
+                      :precision="8"
+                      :show-prefix="false"
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                      aria-label="Jumlah gram aktual"
+                      placeholder="Gram dijual"
+                    />
+                    <MoneyInput
+                      v-if="tx.type === 'redemption'"
+                      v-model="pendingForm.amount"
+                      min="0.01"
+                      step="0.01"
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                      aria-label="Nominal pencairan"
+                      placeholder="Hasil pencairan aktual"
+                    />
+                    <MoneyInput
+                      v-if="
+                        tx.type === 'subscription' &&
+                        selectedAsset.type === 'gold'
+                      "
+                      v-model="pendingForm.quantity"
+                      min="0.00000001"
+                      step="0.00000001"
+                      :precision="8"
+                      :show-prefix="false"
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                      aria-label="Jumlah gram aktual"
+                      placeholder="Gram aktual"
+                    />
+                    <MoneyInput
+                      v-if="
+                        tx.type === 'subscription' &&
+                        selectedAsset.type === 'gold'
+                      "
+                      v-model="pendingForm.unit_price"
+                      min="0.00000001"
+                      step="0.00000001"
+                      :precision="8"
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                      aria-label="Harga emas aktual"
+                      placeholder="Harga per gram"
+                    />
+                    <select
+                      v-if="tx.type === 'redemption'"
+                      v-model="pendingForm.cash_account_id"
+                      aria-label="Rekening penerima pencairan"
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                    >
+                      <option value="">-- Pilih rekening penerima --</option>
+                      <option
+                        v-for="account in accountChoices"
+                        :key="account.id"
+                        :value="account.id"
+                      >
+                        {{ account.name }}
+                      </option>
+                    </select>
+                    <template
+                      v-if="tx.type === 'subscription' && !tx.cash_debited"
+                    >
+                      <select
                         v-model="pendingForm.cash_account_id"
-                        aria-label="Rekening penerima pencairan"
+                        aria-label="Rekening sumber pembelian"
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                       >
-                        <option value="">-- Tanpa rekening penerima --</option>
+                        <option value="">-- Pilih rekening sumber --</option>
                         <option
                           v-for="account in accountChoices"
                           :key="account.id"
                           :value="account.id"
                         >
-                          {{ account.name }}
+                          {{ account.name }} ·
+                          {{ formatRupiah(account.unallocated_cash) }}
                         </option>
-                      </select></template
-                    ><template v-else
-                      ><MoneyInput
-                        v-model="pendingForm.quantity"
-                        min="0.00000001"
-                        step="0.00000001"
-                        :precision="8"
-                        :show-prefix="false"
-                        class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
-                        aria-label="Jumlah unit aktual"
-                        placeholder="Unit aktual"
-                      /><MoneyInput
-                        v-model="pendingForm.unit_price"
-                        min="0.00000001"
-                        step="0.00000001"
-                        :precision="8"
-                        class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
-                        aria-label="NAB aktual"
-                        placeholder="0"
-                      /><template v-if="!tx.cash_debited"
-                        ><select
-                          v-model="pendingForm.cash_account_id"
-                          aria-label="Rekening sumber pembelian"
-                          class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
-                        >
-                          <option value="">-- Tanpa rekening sumber --</option>
-                          <option
-                            v-for="account in accountChoices"
-                            :key="account.id"
-                            :value="account.id"
-                          >
-                            {{ account.name }} · belum dialokasikan
-                            {{ formatRupiah(account.unallocated_cash) }}
-                          </option></select
-                        ><label class="flex items-center gap-2"
-                          ><input
-                            v-model="pendingForm.cash_debited"
-                            type="checkbox"
-                          />Dana sudah dibayar</label
-                        ></template
-                      ></template
-                    ><button
+                      </select>
+                      <label class="flex items-center gap-2">
+                        <input
+                          v-model="pendingForm.cash_debited"
+                          type="checkbox"
+                        />Dana sudah dibayar
+                      </label>
+                    </template>
+                    <button
                       class="rounded-lg bg-primary-100 px-3 py-1.5 font-semibold text-primary-700 sm:col-span-2"
                       @click="
                         transitionAsset(
@@ -2340,7 +2392,7 @@ onMounted(async () => {
                       {{
                         tx.type === "redemption"
                           ? "Catat pencairan selesai"
-                          : "Konfirmasi unit"
+                          : "Konfirmasi pembelian"
                       }}
                     </button>
                   </div>

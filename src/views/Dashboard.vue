@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useBudgetStore } from "@/stores/budget";
 import { useGoalStore } from "@/stores/goal";
 import { formatRupiah } from "@/utils/formatters";
-import { compareDecimal } from "@/utils/decimal";
+import { addDecimal, compareDecimal } from "@/utils/decimal";
 import VueApexCharts from "@/lib/charts";
 import {
   Plus,
@@ -78,6 +78,12 @@ function privateTxMoney(tx) {
 }
 const monthlySavings = computed(
   () => monthlyIncome.value - monthlyExpense.value,
+);
+const investmentAssets = computed(() =>
+  addDecimal(
+    netWorth.value.investment_market_value || "0.00",
+    netWorth.value.investment_book_value_fallback || "0.00",
+  ),
 );
 const monthlyReport = ref({ income: 0, expense: 0, categories: [] });
 const isLoadingTransactions = ref(false);
@@ -346,7 +352,7 @@ async function fetchCashFlowData() {
       <article class="bank-balance-card">
         <div class="bank-balance-top">
           <div>
-            <span class="bank-card-label">KAS TERSEDIA</span
+            <span class="bank-card-label">SALDO HARIAN</span
             ><span class="bank-live-pill"><i></i> Akun operasional</span>
           </div>
           <button
@@ -372,7 +378,7 @@ async function fetchCashFlowData() {
           {{ privateMoney(cashAvailableTotal) }}
         </div>
         <div class="bank-balance-meta">
-          <span>Di luar dana yang dialokasikan ke target</span
+          <span>Saldo untuk kebutuhan sehari-hari, di luar tabungan</span
           ><router-link to="/accounts"
             >Kelola akun <ChevronRight class="w-4 h-4"
           /></router-link>
@@ -425,23 +431,22 @@ async function fetchCashFlowData() {
           <p>Tabungan kas</p>
           <strong>{{ privateMoney(savingsCashTotal) }}</strong>
           <div class="bank-metric-foot">
-            Akun tabungan dan alokasi target dari akun operasional
+            Rekening tabungan dan dana yang dialokasikan ke target
           </div>
         </article>
         <article class="bank-metric-card wealth">
           <div class="bank-metric-head">
-            <span><Wallet /></span><small>Kas + investasi</small>
+            <span><Wallet /></span><small>Emas + RDPU</small>
           </div>
-          <p>Total aset terpantau</p>
-          <strong>{{ privateMoney(netWorth.total_assets) }}</strong>
+          <p>Aset investasi</p>
+          <strong>{{ privateMoney(investmentAssets) }}</strong>
           <div class="bank-metric-foot">
-            Kas {{ privateMoney(netWorth.cash_total) }} · Investasi
-            {{ privateMoney(netWorth.investment_total) }}
+            Nilai aset investasi yang dicatat
             <template
               v-if="compareDecimal(netWorth.investment_in_transit, '0.00') > 0"
             >
-              · termasuk
-              {{ privateMoney(netWorth.investment_in_transit) }} diproses
+              · {{ privateMoney(netWorth.investment_in_transit) }} sedang
+              diproses
             </template>
           </div>
         </article>
