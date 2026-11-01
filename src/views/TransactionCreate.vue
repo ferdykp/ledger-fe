@@ -85,7 +85,7 @@ const newCategoryForm = ref({
 // Form State Quick Add Account
 const newAccountForm = ref({
   name: "",
-  type: "cash",
+  type: "",
   balance: 0,
 });
 
@@ -257,7 +257,7 @@ function openAddCategoryModal() {
 }
 
 function openAddAccountModal() {
-  newAccountForm.value = { name: "", type: "cash", balance: 0 };
+  newAccountForm.value = { name: "", type: "", balance: 0 };
   isAddAccountModalOpen.value = true;
 }
 
@@ -904,9 +904,11 @@ async function handleSubmit() {
             </label>
             <select
               v-model="newAccountForm.type"
+              required
               aria-label="Tipe dompet"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 focus:outline-none text-xs font-semibold text-ink-900"
             >
+              <option value="" disabled>-- Pilih tipe dompet --</option>
               <option value="cash">Tunai (Cash)</option>
               <option value="bank">Bank</option>
               <option value="ewallet">E-Wallet</option>

@@ -236,7 +236,13 @@ const {
                 class="w-full px-3" /></label
             ><label
               ><span class="field-label">Frekuensi</span
-              ><select v-model="form.frequency" class="w-full px-3">
+              ><select
+                v-model="form.frequency"
+                required
+                aria-label="Frekuensi tagihan"
+                class="w-full px-3"
+              >
+                <option value="" disabled>-- Pilih frekuensi --</option>
                 <option value="once">Sekali</option>
                 <option value="weekly">Mingguan</option>
                 <option value="monthly">Bulanan</option>
@@ -246,7 +252,13 @@ const {
           </div>
           <label
             ><span class="field-label">Status</span
-            ><select v-model="form.status" class="w-full px-3">
+            ><select
+              v-model="form.status"
+              required
+              aria-label="Status tagihan"
+              class="w-full px-3"
+            >
+              <option value="" disabled>-- Pilih status tagihan --</option>
               <option value="active">Aktif</option>
               <option value="paused">Dijeda</option>
               <option value="paid">Lunas</option>

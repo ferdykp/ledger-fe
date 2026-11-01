@@ -69,7 +69,7 @@ const contribution = ref({ amount: "", date: localDate(), note: "" });
 const cashForm = ref({
   account_id: "",
   amount: "",
-  action: "allocate",
+  action: "",
   note: "",
 });
 const itemForm = ref({ name: "", quantity: "1", unit_price: "", notes: "" });
@@ -81,21 +81,21 @@ const obligationForm = ref({
   payee: "",
 });
 const assetForm = ref({
-  type: "gold",
+  type: "",
   name: "",
   provider: "",
   identifier: "",
-  storage_type: "physical",
+  storage_type: "",
 });
 const assetTrade = ref({
-  type: "purchase",
-  status: "settled",
-  calc_mode: "actual",
+  type: "",
+  status: "",
+  calc_mode: "",
   cash_account_id: "",
   amount: "",
   quantity: "",
   unit_price: "",
-  price_unit_grams: "1.00000000",
+  price_unit_grams: "",
   fees: "0",
   cash_debited: true,
   transaction_date: localDate(),
@@ -107,7 +107,7 @@ const priceForm = ref({
   captured_at: localDate(),
   source: "manual",
 });
-const assetAllocation = ref({ goal_id: "", quantity: "", action: "allocate" });
+const assetAllocation = ref({ goal_id: "", quantity: "", action: "" });
 const pendingForm = ref({
   quantity: "",
   unit_price: "",
@@ -530,11 +530,11 @@ async function createAsset() {
     selectedAssetId.value = data.data.id;
     showAssetForm.value = false;
     assetForm.value = {
-      type: "gold",
+      type: "",
       name: "",
       provider: "",
       identifier: "",
-      storage_type: "physical",
+      storage_type: "",
     };
     await refreshAll();
     notify.notify({ message: "Aset berhasil ditambahkan.", type: "success" });
@@ -576,7 +576,7 @@ async function recordTrade() {
               ? "redemption"
               : assetTrade.value.type,
       status:
-        selectedAsset.value.type === "gold"
+        selectedAsset.value.type === "gold" || assetTrade.value.type === "sale"
           ? "settled"
           : assetTrade.value.status,
     };
@@ -1152,7 +1152,7 @@ onMounted(async () => {
                   aria-label="Kebutuhan untuk jadwal pembayaran"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
-                  <option value="">Pilih kebutuhan</option>
+                  <option value="" disabled>-- Pilih kebutuhan --</option>
                   <option
                     v-for="item in selectedGoal.items || []"
                     :key="item.id"
@@ -1300,7 +1300,7 @@ onMounted(async () => {
                   aria-label="Rekening untuk alokasi kas"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
-                  <option value="">Pilih rekening</option>
+                  <option value="" disabled>-- Pilih rekening --</option>
                   <option
                     v-for="account in accountChoices"
                     :key="account.id"
@@ -1310,9 +1310,11 @@ onMounted(async () => {
                   </option></select
                 ><select
                   v-model="cashForm.action"
+                  required
                   aria-label="Tindakan alokasi kas"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
+                  <option value="" disabled>-- Pilih tindakan alokasi --</option>
                   <option value="allocate">Alokasikan</option>
                   <option value="release">Lepaskan alokasi</option></select
                 ><MoneyInput
@@ -1414,7 +1416,8 @@ onMounted(async () => {
             </div>
             <form class="asset-create-form" @submit.prevent="createAsset">
               <label class="financial-field"
-                >Jenis aset<select v-model="assetForm.type">
+                >Jenis aset<select v-model="assetForm.type" required>
+                  <option value="" disabled>-- Pilih jenis aset --</option>
                   <option value="gold">Emas</option>
                   <option value="rdpu">Reksa dana pasar uang</option>
                 </select></label
@@ -1425,7 +1428,9 @@ onMounted(async () => {
                   :placeholder="
                     assetForm.type === 'gold'
                       ? 'Contoh: Emas Antam'
-                      : 'Nama produk RDPU'
+                      : assetForm.type === 'rdpu'
+                        ? 'Nama produk RDPU'
+                        : 'Pilih jenis aset terlebih dahulu'
                   " /></label
               ><label class="financial-field"
                 >Penyedia / platform<input
@@ -1436,7 +1441,11 @@ onMounted(async () => {
                   v-model="assetForm.identifier"
                   placeholder="Opsional" /></label
               ><label v-if="assetForm.type === 'gold'" class="financial-field"
-                >Penyimpanan<select v-model="assetForm.storage_type">
+                >Penyimpanan<select
+                  v-model="assetForm.storage_type"
+                  required
+                >
+                  <option value="" disabled>-- Pilih jenis penyimpanan --</option>
                   <option value="physical">Emas fisik</option>
                   <option value="digital">Emas digital</option>
                 </select></label
@@ -1607,7 +1616,11 @@ onMounted(async () => {
               <h3 class="font-bold">Catat transaksi aset</h3>
               <form class="asset-trade-form" @submit.prevent="recordTrade">
                 <label class="financial-field"
-                  >Jenis transaksi<select v-model="assetTrade.type">
+                  >Jenis transaksi<select
+                    v-model="assetTrade.type"
+                    required
+                  >
+                    <option value="" disabled>-- Pilih jenis transaksi --</option>
                     <option value="purchase">
                       {{
                         selectedAsset.type === "gold"
@@ -1625,7 +1638,11 @@ onMounted(async () => {
                   </select></label
                 >
                 <label class="financial-field"
-                  >Cara hitung<select v-model="assetTrade.calc_mode">
+                  >Cara hitung<select
+                    v-model="assetTrade.calc_mode"
+                    required
+                  >
+                    <option value="" disabled>-- Pilih cara hitung --</option>
                     <option value="by_quantity">
                       Hitung dari
                       {{ selectedAsset.type === "gold" ? "gram" : "unit" }}
@@ -1640,9 +1657,13 @@ onMounted(async () => {
                     assetTrade.type === 'purchase'
                   "
                   class="financial-field"
-                  >Status pembelian<select v-model="assetTrade.status">
-                    <option value="pending">Menunggu konfirmasi</option>
-                    <option value="confirmed">Sudah terkonfirmasi</option>
+                  >Status pembelian<select
+                    v-model="assetTrade.status"
+                    required
+                  >
+                    <option value="" disabled>-- Pilih status pembelian --</option>
+                    <option value="pending">Belum dikonfirmasi</option>
+                    <option value="confirmed">Sudah dikonfirmasi</option>
                   </select></label
                 >
                 <label class="financial-field"
@@ -1651,7 +1672,13 @@ onMounted(async () => {
                       ? "Rekening penerima"
                       : "Rekening sumber"
                   }}<select v-model="assetTrade.cash_account_id">
-                    <option value="">Pilih rekening</option>
+                    <option value="">
+                      {{
+                        assetTrade.type === "sale"
+                          ? "-- Tanpa rekening tujuan --"
+                          : "-- Tanpa rekening sumber --"
+                      }}
+                    </option>
                     <option
                       v-for="account in accountChoices"
                       :key="account.id"
@@ -1705,7 +1732,11 @@ onMounted(async () => {
                 <label
                   v-if="selectedAsset.type === 'gold'"
                   class="financial-field"
-                  >Basis harga<select v-model="assetTrade.price_unit_grams">
+                  >Basis harga<select
+                    v-model="assetTrade.price_unit_grams"
+                    required
+                  >
+                    <option value="" disabled>-- Pilih basis harga --</option>
                     <option value="0.01000000">Per 0,01 gram</option>
                     <option value="0.10000000">Per 0,1 gram</option>
                     <option value="1.00000000">Per 1 gram</option>
@@ -1794,7 +1825,7 @@ onMounted(async () => {
                   aria-label="Target alokasi aset"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
-                  <option value="">Pilih target</option>
+                  <option value="" disabled>-- Pilih target --</option>
                   <option v-for="goal in goals" :key="goal.id" :value="goal.id">
                     {{ goal.name }}
                   </option></select
@@ -1809,9 +1840,11 @@ onMounted(async () => {
                   :placeholder="selectedAsset.type === 'gold' ? 'Gram' : 'Unit'"
                 /><select
                   v-model="assetAllocation.action"
+                  required
                   aria-label="Tindakan alokasi aset"
                   class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                 >
+                  <option value="" disabled>-- Pilih tindakan alokasi --</option>
                   <option value="allocate">Alokasikan</option>
                   <option value="release">Lepaskan</option></select
                 ><button class="primary-button" :disabled="busy">Simpan</button>
@@ -1872,7 +1905,7 @@ onMounted(async () => {
                         aria-label="Rekening penerima pencairan"
                         class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                       >
-                        <option value="">Rekening penerima</option>
+                        <option value="">-- Tanpa rekening penerima --</option>
                         <option
                           v-for="account in accountChoices"
                           :key="account.id"
@@ -1904,7 +1937,7 @@ onMounted(async () => {
                           aria-label="Rekening sumber pembelian"
                           class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                         >
-                          <option value="">Rekening sumber</option>
+                          <option value="">-- Tanpa rekening sumber --</option>
                           <option
                             v-for="account in accountChoices"
                             :key="account.id"

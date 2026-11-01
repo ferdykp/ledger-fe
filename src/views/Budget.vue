@@ -372,7 +372,7 @@ async function handleDeleteBudget() {
               :disabled="!!editingBudgetId"
               class="w-full px-4 h-11 border border-line-200 rounded-xl bg-paper-0 focus:border-violet-600 text-xs font-semibold text-ink-900 focus:outline-none disabled:opacity-60"
             >
-              <option value="" disabled>Pilih Kategori</option>
+              <option value="" disabled>-- Pilih kategori pengeluaran --</option>
               <option
                 v-for="cat in categories.filter((c) => c.type === 'expense')"
                 :key="cat.id"
