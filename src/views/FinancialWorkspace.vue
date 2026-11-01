@@ -89,6 +89,10 @@ const assetForm = ref({
   provider: "",
   identifier: "",
   storage_type: "",
+  ownership_source: "",
+  initial_quantity: "",
+  initial_cost_basis: "",
+  initial_date: localDate(),
 });
 const assetTrade = ref({
   type: "",
@@ -598,6 +602,10 @@ async function createAsset() {
       provider: "",
       identifier: "",
       storage_type: "",
+      ownership_source: "",
+      initial_quantity: "",
+      initial_cost_basis: "",
+      initial_date: localDate(),
     };
     await refreshAll();
     notify.notify({ message: "Aset berhasil ditambahkan.", type: "success" });
@@ -1522,7 +1530,70 @@ onMounted(async () => {
                   <option value="physical">Emas fisik</option>
                   <option value="digital">Emas digital</option>
                 </select></label
-              ><button class="primary-button w-full" :disabled="busy">
+              ><fieldset class="asset-ownership-choice">
+                <legend>Asal kepemilikan</legend>
+                <label class="asset-ownership-option">
+                  <input
+                    v-model="assetForm.ownership_source"
+                    type="radio"
+                    name="asset-ownership-source"
+                    value="existing"
+                    required
+                  />
+                  <span>
+                    <strong>Sudah dimiliki sebelum Ledger</strong>
+                    <small>Catat sebagai saldo awal tanpa mengurangi rekening.</small>
+                  </span>
+                </label>
+                <label class="asset-ownership-option">
+                  <input
+                    v-model="assetForm.ownership_source"
+                    type="radio"
+                    name="asset-ownership-source"
+                    value="new"
+                    required
+                  />
+                  <span>
+                    <strong>Pembelian baru</strong>
+                    <small>Aset dibuat dulu, lalu transaksi pembelian dicatat dari detail aset.</small>
+                  </span>
+                </label>
+              </fieldset>
+              <div v-if="assetForm.ownership_source === 'existing'" class="asset-opening-fields">
+                <label class="financial-field">
+                  {{ assetForm.type === 'gold' ? 'Jumlah kepemilikan (gram)' : 'Jumlah unit kepemilikan' }}
+                  <input
+                    v-model="assetForm.initial_quantity"
+                    type="number"
+                    min="0.00000001"
+                    step="0.00000001"
+                    inputmode="decimal"
+                    placeholder="Contoh: 5 atau 0,5"
+                    required
+                  />
+                </label>
+                <label class="financial-field">
+                  Total modal / nilai perolehan
+                  <input
+                    v-model="assetForm.initial_cost_basis"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="Contoh: 5000000"
+                    required
+                  />
+                  <small class="asset-opening-help">Masukkan total harga perolehan. Nilai ini menjadi modal awal aset.</small>
+                </label>
+                <label class="financial-field">
+                  Tanggal saldo awal
+                  <input v-model="assetForm.initial_date" type="date" required />
+                </label>
+                <p class="asset-opening-notice">
+                  Saldo awal menambah kepemilikan dan modal aset, tanpa membuat transaksi keluar dari rekening.
+                </p>
+              </div>
+              <button class="primary-button w-full" :disabled="busy || !assetForm.ownership_source">
                 Buat aset
               </button>
             </form>

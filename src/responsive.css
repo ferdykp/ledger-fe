@@ -1108,6 +1108,113 @@ input[type="radio"] {
   margin-top: 18px;
 }
 
+.asset-ownership-choice {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.asset-ownership-choice legend {
+  margin-bottom: 8px;
+  color: var(--color-ink-700);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.asset-ownership-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--color-line-200);
+  border-radius: 14px;
+  background: var(--color-paper-0);
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.asset-ownership-option:has(input:checked) {
+  border-color: var(--color-primary-600);
+  background: color-mix(in srgb, var(--color-primary-600) 7%, var(--color-paper-0));
+}
+
+.asset-ownership-option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--color-primary-700);
+}
+
+.asset-ownership-option span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.asset-ownership-option strong {
+  color: var(--color-ink-900);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.asset-ownership-option small,
+.asset-opening-help {
+  color: var(--color-ink-600);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.45;
+}
+
+.asset-opening-fields {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-line-200);
+  border-radius: 16px;
+  background: var(--color-base-50);
+}
+
+.asset-opening-notice {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  color: var(--color-primary-800);
+  background: color-mix(in srgb, var(--color-primary-600) 10%, var(--color-paper-0));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dark .asset-ownership-option,
+.dark .asset-opening-fields {
+  border-color: var(--color-line-200);
+  background: var(--color-paper-0);
+}
+
+.dark .asset-ownership-option:has(input:checked) {
+  border-color: var(--color-primary-700);
+  background: var(--color-primary-100);
+}
+
+.dark .asset-ownership-option strong,
+.dark .asset-ownership-choice legend {
+  color: var(--color-ink-900);
+}
+
+.dark .asset-ownership-option small,
+.dark .asset-opening-help {
+  color: var(--color-ink-600);
+}
+
+.dark .asset-opening-notice {
+  color: var(--color-primary-700);
+  background: var(--color-primary-100);
+}
+
 .financial-field {
   display: grid;
   gap: 7px;
