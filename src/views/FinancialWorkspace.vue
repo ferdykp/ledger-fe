@@ -17,7 +17,7 @@ import api from "@/lib/axios";
 const route = useRoute();
 const router = useRouter();
 const notify = useNotificationStore();
-const tab = computed(() => route.path.startsWith("/assets") ? "assets" : "goals");
+const tab = computed(() => route.path.startsWith("/investasi") ? "assets" : "goals");
 const showGoalForm = ref(false);
 const showAssetForm = ref(false);
 const deleteConfirmation = ref(null);
@@ -919,7 +919,7 @@ async function transitionAsset(tx, status) {
 
 onMounted(async () => {
   if (route.query.tab === "assets" && route.path === "/goals") {
-    await router.replace("/assets");
+    await router.replace("/investasi");
   }
   await fetchAll();
 });

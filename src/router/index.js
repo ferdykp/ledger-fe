@@ -20,6 +20,7 @@ const Settings = () => import("../views/Settings.vue");
 const SmartImport = () => import("../views/SmartImport.vue");
 const Bills = () => import("../views/Bills.vue");
 const WhatsAppIntegration = () => import("../views/WhatsAppIntegration.vue");
+const SharedWorkspace = () => import("../views/SharedWorkspace.vue");
 
 const routes = [
   {
@@ -115,11 +116,18 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
-        path: "assets",
+        path: "investasi",
         name: "assets.index",
         component: Goal,
         meta: { requiresAuth: true },
       },
+      {
+        path: "kolaborasi",
+        name: "collaboration.index",
+        component: SharedWorkspace,
+        meta: { requiresAuth: true },
+      },
+      { path: "assets", redirect: "/investasi" },
       {
         path: "report",
         name: "report.index",

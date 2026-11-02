@@ -19,6 +19,7 @@ import {
   Tags,
   ChevronRight,
   MessageCircle,
+  UsersRound,
 } from "@lucide/vue";
 const auth = useAuthStore();
 const route = useRoute();
@@ -38,7 +39,8 @@ const sections = [
     items: [
       { name: "Anggaran", path: "/budget", icon: PiggyBank },
       { name: "Target tabungan", path: "/goals", icon: Target },
-      { name: "Aset investasi", path: "/assets", icon: Wallet },
+      { name: "Aset investasi", path: "/investasi", icon: Wallet },
+      { name: "Keuangan bersama", path: "/kolaborasi", icon: UsersRound },
       { name: "Tagihan", path: "/bills", icon: ReceiptText },
     ],
   },
