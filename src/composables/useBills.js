@@ -1,10 +1,12 @@
 import { ref, onMounted } from "vue";
 import api from "@/lib/axios";
+import { useAccountStore } from "@/stores/account";
 import { localDate } from "@/utils/dates";
 import { useNotificationStore } from "@/stores/notification";
 
 export function useBills() {
   const notify = useNotificationStore();
+  const accountStore = useAccountStore();
   const bills = ref([]),
     loading = ref(false),
     saving = ref(false),
@@ -19,9 +21,11 @@ export function useBills() {
     category: "",
     note: "",
     reminder_enabled: true,
+    auto_pay_enabled: false,
+    auto_pay_account_id: "",
   });
   const form = ref(defaults());
-  const summary = ref({ active_count: 0, monthly_total: 0, overdue_count: 0 });
+  const summary = ref({ active_count: 0, monthly_total: 0, overdue_count: 0, auto_pay_attention_count: 0 });
   const page = ref(1);
   const lastPage = ref(1);
   const loadError = ref(false);
@@ -52,7 +56,12 @@ export function useBills() {
   function edit(bill) {
     if (saving.value) return;
     editing.value = bill;
-    form.value = { ...bill, due_date: String(bill.due_date).slice(0, 10) };
+    form.value = {
+      ...bill,
+      due_date: String(bill.due_date).slice(0, 10),
+      auto_pay_enabled: Boolean(bill.auto_pay_enabled),
+      auto_pay_account_id: bill.auto_pay_account_id || "",
+    };
     open.value = true;
   }
   function close() {
@@ -79,6 +88,7 @@ export function useBills() {
   }
   function save() {
     const payload = { ...form.value, amount: Number(form.value.amount) };
+    if (!payload.auto_pay_enabled) payload.auto_pay_account_id = null;
     return mutate(
       () =>
         editing.value
@@ -109,9 +119,13 @@ export function useBills() {
       year: "numeric",
     });
   }
-  onMounted(() => load());
+  onMounted(() => {
+    load();
+    if (!accountStore.accounts.length) accountStore.fetchAccounts();
+  });
   return {
     bills,
+    accounts: accountStore.accounts,
     loading,
     saving,
     open,

@@ -14,6 +14,7 @@ import {
 import { formatRupiah } from "@/utils/formatters";
 const {
   bills,
+  accounts,
   loading,
   saving,
   open,
@@ -41,7 +42,8 @@ const {
         <h1>Tagihan & langganan</h1>
         <p>
           Simpan biaya rutin, tanggal jatuh tempo, dan status pembayaran agar
-          pengeluaran wajib tidak terlewat.
+          pengeluaran wajib tidak terlewat. Pembayaran otomatis mengurangi
+          saldo yang tercatat di Ledger.
         </p>
       </div>
       <button @click="add" class="primary-button">
@@ -70,9 +72,13 @@ const {
       {{ summary.overdue_count }} tagihan sudah jatuh tempo: Periksa tanggal
       jatuh tempo pada daftar tagihan.
     </p>
+    <p v-if="summary.auto_pay_attention_count" role="alert" class="surface-card p-4 text-amber-700">
+      {{ summary.auto_pay_attention_count }} pembayaran otomatis perlu perhatian. Periksa saldo atau rekening pada tagihan terkait.
+    </p>
     <p class="text-xs text-ink-500">
       Tandai lunas mencatat status tagihan; catat pembayaran di Transaksi untuk
-      memperbarui saldo.
+      memperbarui saldo. Auto bayar hanya memotong saldo internal Ledger, bukan
+      melakukan debit langsung dari bank.
     </p>
     <p v-if="loadError" role="alert" class="text-expense-600">
       Daftar belum berhasil diperbarui.
@@ -120,6 +126,7 @@ const {
                 class="text-[10px] px-2 py-0.5 rounded-full bg-income-100 text-income-600 font-bold"
                 >Lunas</span
               >
+              <span v-if="b.auto_pay_enabled" class="text-[10px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 font-bold">Auto bayar</span>
             </div>
             <div
               class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-500 mt-1"
@@ -132,12 +139,17 @@ const {
               ><span v-if="b.reminder_enabled" class="flex gap-1 items-center"
                 ><Bell class="w-3 h-3" />Reminder</span
               >
+              <span v-if="b.auto_pay_enabled" class="w-full text-primary-700">{{ b.auto_pay_account?.name || 'Rekening tidak tersedia' }} · otomatis</span>
+              <span v-if="b.latest_auto_payment && b.latest_auto_payment.status !== 'paid'" class="w-full text-expense-600">
+                {{ b.latest_auto_payment.status === 'insufficient_balance' ? 'Saldo kurang; akan dicoba lagi' : 'Rekening pembayaran tidak tersedia' }}
+              </span>
+              <span v-else-if="b.latest_auto_payment?.status === 'paid'" class="w-full text-income-600">Pembayaran otomatis terakhir {{ dueLabel(b.latest_auto_payment.scheduled_for) }}</span>
             </div>
           </div>
           <b class="font-mono-money text-sm">{{ formatRupiah(b.amount) }}</b>
           <div class="flex gap-1" @click.stop>
             <button
-              v-if="b.status !== 'paid'"
+              v-if="b.status !== 'paid' && !b.auto_pay_enabled"
               @click="paid(b)"
               class="icon-button text-income-600"
               title="Tandai lunas"
@@ -211,71 +223,41 @@ const {
           </button>
         </div>
         <div class="grid gap-4">
-          <label
-            ><span class="field-label">Nama</span
-            ><input
-              v-model="form.name"
-              required
-              class="w-full px-3"
-              placeholder="Internet rumah" /></label
-          ><label
-            ><span class="field-label">Nominal</span
-            ><MoneyInput
-              v-model="form.amount"
-              required
-              class="w-full px-3"
-              placeholder="350.000"
-          /></label>
+          <label class="grid gap-1.5"><span class="field-label">Nama</span><input v-model="form.name" required class="w-full px-3" placeholder="Internet rumah" /></label>
+          <label class="grid gap-1.5"><span class="field-label">Nominal</span><MoneyInput v-model="form.amount" required class="w-full px-3" placeholder="350.000" /></label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label
-              ><span class="field-label">Jatuh tempo</span
-              ><input
-                v-model="form.due_date"
-                required
-                type="date"
-                class="w-full px-3" /></label
-            ><label
-              ><span class="field-label">Frekuensi</span
-              ><select
-                v-model="form.frequency"
-                required
-                aria-label="Frekuensi tagihan"
-                class="w-full px-3"
-              >
+            <label class="grid gap-1.5"><span class="field-label">Jatuh tempo</span><input v-model="form.due_date" required type="date" class="w-full px-3" /></label>
+            <label class="grid gap-1.5"><span class="field-label">Frekuensi</span><select v-model="form.frequency" required aria-label="Frekuensi tagihan" class="w-full px-3">
                 <option value="" disabled>-- Pilih frekuensi --</option>
                 <option value="once">Sekali</option>
                 <option value="weekly">Mingguan</option>
                 <option value="monthly">Bulanan</option>
                 <option value="yearly">Tahunan</option>
-              </select></label
-            >
+            </select></label>
           </div>
-          <label
-            ><span class="field-label">Status</span
-            ><select
-              v-model="form.status"
-              required
-              aria-label="Status tagihan"
-              class="w-full px-3"
-            >
+          <label class="grid gap-1.5"><span class="field-label">Status</span><select v-model="form.status" required aria-label="Status tagihan" class="w-full px-3">
               <option value="" disabled>-- Pilih status tagihan --</option>
               <option value="active">Aktif</option>
               <option value="paused">Dijeda</option>
-              <option value="paid">Lunas</option>
-            </select></label
-          ><label
-            ><span class="field-label">Kategori</span
-            ><input
-              v-model="form.category"
-              class="w-full px-3"
-              placeholder="Listrik, internet, hiburan…" /></label
-          ><label
-            ><span class="field-label">Catatan</span
-            ><textarea v-model="form.note" class="w-full p-3 min-h-24" /></label
-          ><label class="flex gap-3 items-center text-sm"
-            ><input v-model="form.reminder_enabled" type="checkbox" />Tampilkan
-            pengingat jatuh tempo di aplikasi</label
-          ><button :disabled="saving" class="primary-button w-full">
+              <option value="paid" :disabled="form.auto_pay_enabled">Lunas</option>
+            </select></label>
+          <label class="grid gap-1.5"><span class="field-label">Kategori</span><input v-model="form.category" class="w-full px-3" placeholder="Listrik, internet, hiburan…" /></label>
+          <label class="grid gap-1.5"><span class="field-label">Catatan</span><textarea v-model="form.note" class="w-full p-3 min-h-24" placeholder="Catatan tambahan (opsional)" /></label>
+          <label class="flex gap-3 items-center text-sm"><input v-model="form.reminder_enabled" type="checkbox" />Tampilkan pengingat jatuh tempo di aplikasi</label>
+          <div class="rounded-2xl border border-line-200 bg-base-50 p-4">
+            <label class="flex items-start gap-3 text-sm font-semibold">
+              <input v-model="form.auto_pay_enabled" type="checkbox" class="mt-1" />
+              <span>Potong saldo Ledger otomatis saat jatuh tempo</span>
+            </label>
+            <div v-if="form.auto_pay_enabled" class="mt-3 grid gap-2">
+              <label class="financial-field">Rekening sumber<select v-model="form.auto_pay_account_id" required>
+                <option value="" disabled>-- Pilih rekening --</option>
+                <option v-for="account in accounts.filter(item => !item.is_archived && ['cash', 'bank', 'ewallet'].includes(item.type))" :key="account.id" :value="account.id">{{ account.name }} · {{ formatRupiah(account.balance) }}</option>
+              </select></label>
+              <p class="text-xs leading-relaxed text-ink-500">Pada tanggal {{ dueLabel(form.due_date) }}, Ledger mencatat pengeluaran {{ formatRupiah(form.amount) }} dan mengurangi saldo internal. Ini tidak menarik uang langsung dari bank. Jika saldo kurang, pembayaran ditunda dan dicoba kembali otomatis.</p>
+            </div>
+          </div>
+          <button :disabled="saving" class="primary-button w-full">
             {{ editing ? "Simpan perubahan" : "Tambah tagihan" }}
           </button>
         </div>
