@@ -935,24 +935,6 @@ onMounted(async () => {
           {{ tab === "goals" ? "Rencanakan kebutuhan, siapkan pendanaan, dan pantau progres target Anda." : "Pantau nilai, riwayat, dan perkembangan aset investasi Anda." }}
         </p>
       </div>
-      <nav class="financial-tabs" aria-label="Halaman perencanaan keuangan">
-        <router-link
-          to="/goals"
-          class="financial-tab"
-          :class="{ 'is-active': tab === 'goals' }"
-          :aria-current="tab === 'goals' ? 'page' : undefined"
-        >
-          Target tabungan
-        </router-link>
-        <router-link
-          to="/assets"
-          class="financial-tab"
-          :class="{ 'is-active': tab === 'assets' }"
-          :aria-current="tab === 'assets' ? 'page' : undefined"
-        >
-          Aset investasi
-        </router-link>
-      </nav>
     </header>
 
     <div
