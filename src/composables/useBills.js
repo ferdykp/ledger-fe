@@ -1,4 +1,5 @@
 import { ref, onMounted } from "vue";
+import { storeToRefs } from "pinia";
 import api from "@/lib/axios";
 import { useAccountStore } from "@/stores/account";
 import { localDate } from "@/utils/dates";
@@ -7,6 +8,7 @@ import { useNotificationStore } from "@/stores/notification";
 export function useBills() {
   const notify = useNotificationStore();
   const accountStore = useAccountStore();
+  const { accounts } = storeToRefs(accountStore);
   const bills = ref([]),
     loading = ref(false),
     saving = ref(false),
@@ -125,7 +127,7 @@ export function useBills() {
   });
   return {
     bills,
-    accounts: accountStore.accounts,
+    accounts,
     loading,
     saving,
     open,
