@@ -1616,12 +1616,15 @@ onMounted(async () => {
             <article class="surface-card p-5 sm:col-span-2">
               <h3 class="font-bold">Sisihkan aset untuk {{ selectedGoal.name }}</h3>
               <p class="mt-1 text-xs text-ink-500">Pilih gram emas atau unit RDPU yang tersedia. Nilai aset mengikuti valuasi, sementara kuantitas yang dialokasikan tetap.</p>
-              <form class="mt-3 grid gap-2 sm:grid-cols-[1.2fr_1fr_1fr_auto]" @submit.prevent="allocateGoalAsset">
-                <label class="financial-field">Aset<select v-model="goalAssetAllocation.asset_id" required><option value="" disabled>-- Pilih aset --</option><option v-for="asset in assets" :key="asset.id" :value="asset.id" :disabled="asset.valuation_mode === 'value_only'">{{ asset.name }} · {{ asset.type === 'gold' ? `${formatQuantity(asset.quantity)} gram` : asset.valuation_mode === 'value_only' ? 'Unit belum diketahui' : `${formatQuantity(asset.quantity)} unit` }}</option></select></label>
-                <label class="financial-field">Jumlah<MoneyInput v-model="goalAssetAllocation.quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" placeholder="Gram / unit" required /></label>
-                <label class="financial-field">Tindakan<select v-model="goalAssetAllocation.action" required><option value="allocate">Sisihkan untuk target</option><option value="release">Kurangi alokasi</option></select></label>
-                <button class="primary-button self-end" :disabled="busy">Simpan</button>
-              </form>
+              <details class="workspace-form-disclosure mt-3">
+                <summary>Atur alokasi aset</summary>
+                <form class="mt-3 grid gap-3 sm:grid-cols-2" @submit.prevent="allocateGoalAsset">
+                  <label class="financial-field sm:col-span-2">Aset<select v-model="goalAssetAllocation.asset_id" required><option value="" disabled>-- Pilih aset --</option><option v-for="asset in assets" :key="asset.id" :value="asset.id" :disabled="asset.valuation_mode === 'value_only'">{{ asset.name }} · {{ asset.type === 'gold' ? `${formatQuantity(asset.quantity)} gram` : asset.valuation_mode === 'value_only' ? 'Unit belum diketahui' : `${formatQuantity(asset.quantity)} unit` }}</option></select></label>
+                  <label class="financial-field">Jumlah<MoneyInput v-model="goalAssetAllocation.quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" placeholder="Gram / unit" required /></label>
+                  <label class="financial-field">Tindakan<select v-model="goalAssetAllocation.action" required><option value="allocate">Sisihkan untuk target</option><option value="release">Kurangi alokasi</option></select></label>
+                  <button class="primary-button sm:col-span-2" :disabled="busy">Simpan alokasi</button>
+                </form>
+              </details>
               <div v-if="funding?.allocated_assets?.length" class="mt-4 divide-y divide-line-200">
                 <div v-for="row in funding.allocated_assets" :key="row.asset_id" class="flex flex-wrap justify-between gap-2 py-2 text-sm"><span>{{ row.name }} · {{ formatQuantity(row.quantity) }} {{ row.type === 'gold' ? 'gram' : 'unit' }}</span><b>{{ row.value == null ? 'Valuasi belum tersedia' : formatRupiah(row.value) }}</b></div>
               </div>
