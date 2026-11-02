@@ -7,7 +7,7 @@ const props = defineProps({
   modelValue: { type: Object, required: true },
   busy: { type: Boolean, default: false },
 });
-const emit = defineEmits(["update:modelValue", "save"]);
+const emit = defineEmits(["update:modelValue", "save", "delete"]);
 
 function update(key, value) {
   emit("update:modelValue", { ...props.modelValue, [key]: value });
@@ -31,6 +31,7 @@ function update(key, value) {
         <div class="flex justify-between gap-3 text-sm"><b>{{ target.type === 'gold' ? 'Emas' : 'RDPU' }}</b><span>Realisasi {{ formatRupiah(target.actual) }}</span></div>
         <p v-if="target.target" class="mt-1 text-xs text-ink-500">Target {{ formatRupiah(target.target) }} · tersisa {{ formatRupiah(target.remaining) }}</p>
         <p v-else class="mt-1 text-xs text-ink-500">Target bulanan belum diatur.</p>
+        <button v-if="target.target" type="button" class="mt-2 text-xs font-semibold text-expense-600" :disabled="busy" @click="emit('delete', target.type)">Hapus target</button>
       </div>
     </div>
     <form class="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="emit('save')">

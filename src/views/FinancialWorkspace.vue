@@ -19,7 +19,11 @@ const router = useRouter();
 const notify = useNotificationStore();
 const tab = computed(() => route.path.startsWith("/investasi") ? "assets" : "goals");
 const showGoalForm = ref(false);
+const showGoalEditForm = ref(false);
+const goalEditForm = ref({ name: "", target_date: "", icon: "target" });
 const showAssetForm = ref(false);
+const showAssetEditForm = ref(false);
+const assetEditForm = ref({ name: "", provider: "", identifier: "", storage_type: "" });
 const deleteConfirmation = ref(null);
 const isDeletingRecord = ref(false);
 const deleteError = ref("");
@@ -74,6 +78,7 @@ const templates = {
 };
 const goalForm = ref({ name: "", target_date: "", icon: "target", items: [] });
 const contribution = ref({ amount: "", date: localDate(), note: "" });
+const editingContributionId = ref(null);
 const cashForm = ref({
   account_id: "",
   amount: "",
@@ -81,6 +86,8 @@ const cashForm = ref({
   note: "",
 });
 const itemForm = ref({ name: "", quantity: "1", unit_price: "", notes: "" });
+const editingItemId = ref(null);
+const editingObligationId = ref(null);
 const obligationForm = ref({
   goal_item_id: "",
   name: "",
@@ -218,9 +225,40 @@ function selectGoal(id) {
 }
 function backToGoalList() {
   selectedGoalId.value = null;
+  showGoalEditForm.value = false;
+}
+function openGoalEdit() {
+  if (!selectedGoal.value) return;
+  goalEditForm.value = { name: selectedGoal.value.name, target_date: selectedGoal.value.target_date || "", icon: selectedGoal.value.icon || "target" };
+  showGoalEditForm.value = !showGoalEditForm.value;
+}
+async function updateGoalMetadata() {
+  if (!selectedGoal.value || busy.value || !goalEditForm.value.name.trim()) return;
+  busy.value = true;
+  try {
+    await api.put(`/api/goals/${selectedGoal.value.id}`, {
+      ...goalEditForm.value,
+      target_amount: selectedGoal.value.target_amount,
+    });
+    showGoalEditForm.value = false;
+    await refreshAll();
+    notify.notify({ message: "Target berhasil diperbarui.", type: "success" });
+  } catch (err) { notifyError(err, "Target gagal diperbarui."); }
+  finally { busy.value = false; }
 }
 function backToAssetList() {
   selectedAssetId.value = null;
+  showAssetEditForm.value = false;
+}
+function openAssetEdit() {
+  if (!selectedAsset.value) return;
+  assetEditForm.value = {
+    name: selectedAsset.value.name || "",
+    provider: selectedAsset.value.provider || "",
+    identifier: selectedAsset.value.identifier || "",
+    storage_type: selectedAsset.value.storage_type || "",
+  };
+  showAssetEditForm.value = true;
 }
 function requestDelete(type, item) {
   deleteError.value = "";
@@ -377,6 +415,16 @@ async function saveMonthlyTarget() {
   } finally {
     busy.value = false;
   }
+}
+async function deleteMonthlyTarget(type) {
+  if (busy.value || !window.confirm(`Hapus target investasi bulanan ${type === 'gold' ? 'emas' : 'RDPU'}?`)) return;
+  busy.value = true;
+  try {
+    await api.delete("/api/assets/saving-consistency/target", { data: { type } });
+    await refreshAll();
+    notify.notify({ message: "Target investasi bulanan dihapus.", type: "success" });
+  } catch (err) { notifyError(err, "Target investasi bulanan gagal dihapus."); }
+  finally { busy.value = false; }
 }
 
 function onAssetTradeTypeChange() {
@@ -561,15 +609,19 @@ async function createGoal() {
 
 async function addContribution() {
   if (busy.value || !selectedGoal.value) return;
+  const wasEditing = Boolean(editingContributionId.value);
   busy.value = true;
   try {
-    if (!contribution.value.idempotency_key)
+    if (wasEditing) {
+      await api.put(`/api/goals/${selectedGoal.value.id}/contributions/${editingContributionId.value}`, contribution.value);
+    } else if (!contribution.value.idempotency_key) {
       contribution.value.idempotency_key = newIdempotencyKey();
-    await api.post(
-      `/api/goals/${selectedGoal.value.id}/contributions`,
-      contribution.value,
-    );
+      await api.post(`/api/goals/${selectedGoal.value.id}/contributions`, contribution.value);
+    } else {
+      await api.post(`/api/goals/${selectedGoal.value.id}/contributions`, contribution.value);
+    }
     contribution.value = { amount: "", date: localDate(), note: "" };
+    editingContributionId.value = null;
     notify.notify({
       message: "Setoran dicatat di riwayat target.",
       type: "success",
@@ -580,6 +632,22 @@ async function addContribution() {
   } finally {
     busy.value = false;
   }
+}
+
+function editContribution(row) {
+  editingContributionId.value = row.id;
+  contribution.value = { amount: String(row.amount), date: row.date, note: row.note || "" };
+  const disclosure = document.querySelector(".goal-contribution-form")?.closest("details");
+  if (disclosure) disclosure.open = true;
+}
+
+async function deleteContribution(row) {
+  if (!window.confirm(`Hapus catatan setoran ${formatRupiah(row.amount)} tanggal ${row.date}? Progres target akan disesuaikan.`)) return;
+  try {
+    await api.delete(`/api/goals/${selectedGoal.value.id}/contributions/${row.id}`);
+    await refreshAll();
+    notify.notify({ message: "Catatan setoran dihapus dan progres target diperbarui.", type: "success" });
+  } catch (err) { notifyError(err, "Catatan setoran tidak dapat dihapus."); }
 }
 
 async function allocateCash() {
@@ -611,13 +679,19 @@ async function allocateCash() {
 
 async function addItem() {
   if (busy.value || !selectedGoal.value) return;
+  const wasEditing = Boolean(editingItemId.value);
   busy.value = true;
   try {
-    await api.post(`/api/goals/${selectedGoal.value.id}/items`, itemForm.value);
+    if (wasEditing) {
+      await api.put(`/api/goals/${selectedGoal.value.id}/items/${editingItemId.value}`, itemForm.value);
+    } else {
+      await api.post(`/api/goals/${selectedGoal.value.id}/items`, itemForm.value);
+    }
     itemForm.value = { name: "", quantity: "1", unit_price: "", notes: "" };
+    editingItemId.value = null;
     await refreshAll();
     notify.notify({
-      message: "Rincian anggaran ditambahkan.",
+      message: wasEditing ? "Rincian anggaran diperbarui." : "Rincian anggaran ditambahkan.",
       type: "success",
     });
   } catch (err) {
@@ -625,6 +699,19 @@ async function addItem() {
   } finally {
     busy.value = false;
   }
+}
+
+function editItem(item) {
+  editingItemId.value = item.id;
+  itemForm.value = {
+    name: item.name,
+    quantity: String(item.quantity),
+    unit_price: String(item.unit_price),
+    notes: item.notes || "",
+  };
+  const disclosure = document.querySelector(".goal-item-form")?.closest("details");
+  if (disclosure) disclosure.open = true;
+  document.querySelector(".goal-item-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function removeItem(item) {
@@ -637,16 +724,42 @@ async function removeItem(item) {
   }
 }
 
+function editObligation(item, obligation) {
+  editingObligationId.value = obligation.id;
+  obligationForm.value = {
+    goal_item_id: item.id,
+    name: obligation.name,
+    amount: String(obligation.amount),
+    due_date: obligation.due_date || "",
+    payee: obligation.payee || "",
+  };
+  const disclosure = document.querySelector(".goal-obligation-form")?.closest("details");
+  if (disclosure) disclosure.open = true;
+}
+
+async function removeObligation(item, obligation) {
+  if (Number(obligation.paid_amount || 0) > 0) return;
+  if (!window.confirm(`Hapus jadwal pembayaran “${obligation.name}”?`)) return;
+  try {
+    await api.delete(`/api/goals/${selectedGoal.value.id}/items/${item.id}/obligations/${obligation.id}`);
+    await refreshAll();
+    notify.notify({ message: "Jadwal pembayaran dihapus.", type: "success" });
+  } catch (err) { notifyError(err, "Jadwal pembayaran tidak dapat dihapus."); }
+}
+
 async function addObligation() {
   if (busy.value || !selectedGoal.value || !obligationForm.value.goal_item_id)
     return;
+  const wasEditing = Boolean(editingObligationId.value);
   busy.value = true;
   try {
     const { goal_item_id, ...payload } = obligationForm.value;
-    await api.post(
-      `/api/goals/${selectedGoal.value.id}/items/${goal_item_id}/obligations`,
-      payload,
-    );
+    if (editingObligationId.value) {
+      await api.put(`/api/goals/${selectedGoal.value.id}/items/${goal_item_id}/obligations/${editingObligationId.value}`, payload);
+    } else {
+      await api.post(`/api/goals/${selectedGoal.value.id}/items/${goal_item_id}/obligations`, payload);
+    }
+    editingObligationId.value = null;
     obligationForm.value = {
       goal_item_id: "",
       name: "",
@@ -656,7 +769,7 @@ async function addObligation() {
     };
     await refreshAll();
     notify.notify({
-      message: "Jadwal pembayaran ditambahkan.",
+      message: wasEditing ? "Jadwal pembayaran diperbarui." : "Jadwal pembayaran ditambahkan.",
       type: "success",
     });
   } catch (err) {
@@ -713,6 +826,17 @@ async function createAsset() {
   } finally {
     busy.value = false;
   }
+}
+async function updateAssetMetadata() {
+  if (!selectedAsset.value || busy.value || !assetEditForm.value.name.trim()) return;
+  busy.value = true;
+  try {
+    await api.put(`/api/assets/${selectedAsset.value.id}`, assetEditForm.value);
+    showAssetEditForm.value = false;
+    await refreshAll();
+    notify.notify({ message: "Detail aset berhasil diperbarui.", type: "success" });
+  } catch (err) { notifyError(err, "Detail aset gagal diperbarui."); }
+  finally { busy.value = false; }
 }
 
 async function recordTrade() {
@@ -1181,6 +1305,13 @@ onMounted(async () => {
             </button>
             <button
               type="button"
+              class="secondary-button"
+              @click="openGoalEdit"
+            >
+              {{ showGoalEditForm ? 'Tutup edit' : 'Edit target' }}
+            </button>
+            <button
+              type="button"
               class="workspace-delete-button"
               :aria-label="`Hapus target ${selectedGoal.name}`"
               @click="requestDelete('goal', selectedGoal)"
@@ -1188,6 +1319,11 @@ onMounted(async () => {
               Hapus target
             </button>
           </div>
+          <form v-if="showGoalEditForm" class="surface-card grid gap-3 p-4 sm:grid-cols-[1fr_220px_auto] sm:items-end" @submit.prevent="updateGoalMetadata">
+            <label class="financial-field">Nama target<input v-model="goalEditForm.name" required maxlength="160" /></label>
+            <label class="financial-field">Tanggal target<input v-model="goalEditForm.target_date" type="date" /></label>
+            <button class="primary-button" :disabled="busy">Simpan perubahan</button>
+          </form>
           <section class="surface-card goal-funding-card">
             <div
               class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
@@ -1317,7 +1453,7 @@ onMounted(async () => {
                     <b class="text-sm">{{
                       formatRupiah(item.estimated_amount)
                     }}</b
-                    ><button
+                    ><button class="ml-2 text-xs font-semibold text-primary-600" @click="editItem(item)">Edit</button><button
                       class="ml-2 text-xs text-expense-600"
                       @click="removeItem(item)"
                     >
@@ -1334,7 +1470,7 @@ onMounted(async () => {
                     >{{ obligation.name }} ·
                     {{ obligation.due_date || "tanpa tanggal" }} · sisa
                     {{ formatRupiah(obligation.remaining_amount) }}</span
-                  ><button
+                  ><div class="ml-2 flex shrink-0 flex-wrap justify-end gap-x-2 gap-y-1"><button
                     v-if="
                       compareDecimal(obligation.remaining_amount, '0.00') > 0
                     "
@@ -1342,13 +1478,13 @@ onMounted(async () => {
                     @click="payObligation({ ...obligation, item: item.name })"
                   >
                     Bayar
-                  </button>
+                  </button><template v-if="Number(obligation.paid_amount || 0) === 0"><button class="font-semibold text-primary-600" @click="editObligation(item, obligation)">Edit</button><button class="font-semibold text-expense-600" @click="removeObligation(item, obligation)">Hapus</button></template></div>
                 </div>
               </div>
               <details v-if="selectedAsset.valuation_mode !== 'value_only'" class="workspace-form-disclosure">
                 <summary>Tambah rincian kebutuhan</summary>
                 <form
-                  class="mt-4 grid gap-2 sm:grid-cols-[1fr_95px_130px_auto]"
+                  class="goal-item-form mt-4 grid gap-2 sm:grid-cols-[1fr_95px_130px_auto]"
                   @submit.prevent="addItem"
                 >
                   <input
@@ -1371,9 +1507,9 @@ onMounted(async () => {
                     required
                     class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                     placeholder="0"
-                  /><button class="primary-button" :disabled="busy">
-                    Tambah
-                  </button>
+                  /><div class="flex flex-wrap gap-2"><button class="primary-button" :disabled="busy">
+                    {{ editingItemId ? 'Simpan' : 'Tambah' }}
+                  </button><button v-if="editingItemId" type="button" class="secondary-button" @click="editingItemId = null; itemForm = { name: '', quantity: '1', unit_price: '', notes: '' }">Batal</button></div>
                 </form>
               </details>
             </article>
@@ -1384,9 +1520,9 @@ onMounted(async () => {
                 saat membayar.
               </p>
               <details class="workspace-form-disclosure">
-                <summary>Tambah jadwal pembayaran</summary>
+                <summary>{{ editingObligationId ? 'Ubah jadwal pembayaran' : 'Tambah jadwal pembayaran' }}</summary>
                 <form
-                  class="mt-3 grid gap-2 sm:grid-cols-2"
+                  class="goal-obligation-form mt-3 grid gap-2 sm:grid-cols-2"
                   @submit.prevent="addObligation"
                 >
                   <select
@@ -1425,12 +1561,9 @@ onMounted(async () => {
                     v-model="obligationForm.payee"
                     class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm sm:col-span-2"
                     placeholder="Vendor / penerima (opsional)"
-                  /><button
-                    class="primary-button sm:col-span-2"
-                    :disabled="busy"
-                  >
-                    Tambah jadwal
-                  </button>
+                  /><div class="flex flex-wrap gap-2 sm:col-span-2"><button class="primary-button" :disabled="busy">
+                    {{ editingObligationId ? 'Simpan perubahan' : 'Tambah jadwal' }}
+                  </button><button v-if="editingObligationId" type="button" class="secondary-button" @click="editingObligationId = null; obligationForm = { goal_item_id: '', name: '', amount: '', due_date: '', payee: '' }">Batal</button></div>
                 </form>
               </details>
               <div
@@ -1481,9 +1614,9 @@ onMounted(async () => {
                 ke target, gunakan bagian Sisihkan uang untuk target.
               </p>
               <details class="workspace-form-disclosure">
-                <summary>Tambah catatan setoran</summary>
+                <summary>{{ editingContributionId ? 'Edit catatan setoran' : 'Tambah catatan setoran' }}</summary>
                 <form
-                  class="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_1fr_auto]"
+                  class="goal-contribution-form mt-3 grid gap-2 sm:grid-cols-[1fr_140px_1fr_auto]"
                   @submit.prevent="addContribution"
                 >
                   <MoneyInput
@@ -1504,9 +1637,9 @@ onMounted(async () => {
                     v-model="contribution.note"
                     class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                     placeholder="Catatan opsional"
-                  /><button class="primary-button" :disabled="busy">
-                    Catat
-                  </button>
+                  /><div class="flex flex-wrap gap-2"><button class="primary-button" :disabled="busy">
+                    {{ editingContributionId ? 'Simpan' : 'Catat' }}
+                  </button><button v-if="editingContributionId" type="button" class="secondary-button" @click="editingContributionId = null; contribution = { amount: '', date: localDate(), note: '' }">Batal</button></div>
                 </form>
               </details>
               <div
@@ -1516,12 +1649,12 @@ onMounted(async () => {
                 <div
                   v-for="row in contributions"
                   :key="row.id"
-                  class="flex justify-between py-2 text-sm"
+                  class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
                 >
                   <span
                     >{{ row.date }}
                     <small class="text-ink-500">{{ row.note }}</small></span
-                  ><b>{{ formatRupiah(row.amount) }}</b>
+                  ><div class="flex items-center gap-2"><b>{{ formatRupiah(row.amount) }}</b><button class="text-xs font-semibold text-primary-600" @click="editContribution(row)">Edit</button><button class="text-xs font-semibold text-expense-600" @click="deleteContribution(row)">Hapus</button></div>
                 </div>
                 <button
                   v-if="contributionHasMore"
@@ -1673,7 +1806,7 @@ onMounted(async () => {
           }}</b>
         </article>
       </section>
-      <AssetSavingConsistency v-if="!selectedAsset" v-model="monthlyTargetForm" :summary="savingConsistency" :busy="busy" @save="saveMonthlyTarget" />
+      <AssetSavingConsistency v-if="!selectedAsset" v-model="monthlyTargetForm" :summary="savingConsistency" :busy="busy" @save="saveMonthlyTarget" @delete="deleteMonthlyTarget" />
       <section
         class="asset-workspace-layout"
         :class="selectedAsset ? 'has-selected-asset' : 'is-list-view'"
@@ -1946,6 +2079,13 @@ onMounted(async () => {
             </button>
             <button
               type="button"
+              class="secondary-button"
+              @click="openAssetEdit"
+            >
+              {{ showAssetEditForm ? 'Tutup edit' : 'Edit aset' }}
+            </button>
+            <button
+              type="button"
               class="workspace-delete-button"
               :aria-label="`Hapus aset ${selectedAsset.name}`"
               title="Hapus aset dan data transaksinya"
@@ -1954,6 +2094,13 @@ onMounted(async () => {
               Hapus aset
             </button>
           </div>
+          <form v-if="showAssetEditForm" class="surface-card grid gap-3 p-4 sm:grid-cols-2" @submit.prevent="updateAssetMetadata">
+            <label class="financial-field">Nama aset<input v-model="assetEditForm.name" required maxlength="160" /></label>
+            <label class="financial-field">Penyedia / platform<input v-model="assetEditForm.provider" maxlength="160" /></label>
+            <label class="financial-field">Kode produk<input v-model="assetEditForm.identifier" maxlength="100" /></label>
+            <label v-if="selectedAsset.type === 'gold'" class="financial-field">Penyimpanan<select v-model="assetEditForm.storage_type"><option value="">-- Pilih penyimpanan --</option><option value="digital">Digital</option><option value="physical">Fisik</option></select></label>
+            <button class="primary-button sm:col-span-2" :disabled="busy">Simpan detail aset</button>
+          </form>
           <section class="surface-card asset-detail-card">
             <div class="asset-detail-heading">
               <div>
