@@ -37,7 +37,8 @@ const sections = [
     label: "Perencanaan",
     items: [
       { name: "Anggaran", path: "/budget", icon: PiggyBank },
-      { name: "Target & aset", path: "/goals", icon: Target },
+      { name: "Target tabungan", path: "/goals", icon: Target },
+      { name: "Aset investasi", path: "/assets", icon: Wallet },
       { name: "Tagihan", path: "/bills", icon: ReceiptText },
     ],
   },

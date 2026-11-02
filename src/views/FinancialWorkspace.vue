@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { localDate } from "@/utils/dates";
 import { formatQuantity, formatRupiah } from "@/utils/formatters";
 import MoneyInput from "@/components/MoneyInput.vue";
+import AssetSavingConsistency from "@/components/financial/AssetSavingConsistency.vue";
 import {
   addDecimal,
   compareDecimal,
@@ -16,7 +17,7 @@ import api from "@/lib/axios";
 const route = useRoute();
 const router = useRouter();
 const notify = useNotificationStore();
-const tab = ref("goals");
+const tab = computed(() => route.path.startsWith("/assets") ? "assets" : "goals");
 const showGoalForm = ref(false);
 const showAssetForm = ref(false);
 const deleteConfirmation = ref(null);
@@ -27,6 +28,8 @@ const goalFundingSummaries = ref([]);
 const accounts = ref([]);
 const cashAllocationSummary = ref([]);
 const assets = ref([]);
+const savingConsistency = ref({ current_streak: 0, longest_streak: 0, active_months: 0, monthly_targets: [] });
+const monthlyTargetForm = ref({ type: "rdpu", amount: "" });
 const selectedGoalId = ref(null);
 const selectedAssetId = ref(null);
 const funding = ref(null);
@@ -92,11 +95,22 @@ const assetForm = ref({
   identifier: "",
   storage_type: "",
   ownership_source: "",
+  opening_mode: "units",
   initial_quantity: "",
   initial_cost_basis: "",
+  initial_current_value: "",
+  initial_nav: "",
   initial_date: localDate(),
+  purchase_amount: "",
+  purchase_quantity: "",
+  purchase_status: "pending",
+  purchase_cash_account_id: "",
+  purchase_cash_debited: true,
+  purchase_fees: "0",
+  purchase_date: localDate(),
 });
 const assetTrade = ref({
+  form_mode: "simple",
   type: "",
   status: "",
   calc_mode: "",
@@ -117,6 +131,9 @@ const priceForm = ref({
   source: "manual",
 });
 const assetAllocation = ref({ goal_id: "", quantity: "", action: "" });
+const goalAssetAllocation = ref({ asset_id: "", quantity: "", action: "allocate" });
+const completeUnitsForm = ref({ quantity: "", current_value: "", nav: "", cost_basis: "", captured_at: localDate() });
+const historicalImport = ref({ reconcile_opening: false, idempotency_key: null, transactions: [{ action: "purchase", transaction_date: localDate(), amount: "", quantity: "", unit_price: "", fees: "0", notes: "" }] });
 const pendingForm = ref({
   quantity: "",
   unit_price: "",
@@ -133,6 +150,7 @@ const selectedAsset = computed(
   () =>
     assets.value.find((asset) => asset.id === selectedAssetId.value) || null,
 );
+const allAssetBasisKnown = computed(() => assets.value.every((asset) => asset.cost_basis_known !== false));
 const accountChoices = computed(() =>
   accounts.value
     .filter(
@@ -197,13 +215,6 @@ function newIdempotencyKey() {
 function selectGoal(id) {
   selectedGoalId.value = id;
   fetchGoalDetails();
-}
-function switchTab(nextTab) {
-  tab.value = nextTab;
-  selectedGoalId.value = null;
-  selectedAssetId.value = null;
-  showGoalForm.value = false;
-  showAssetForm.value = false;
 }
 function backToGoalList() {
   selectedGoalId.value = null;
@@ -293,7 +304,7 @@ const effectivePriceUnit = computed(() =>
 const tradePreview = computed(() => {
   const { amount, quantity, unit_price } = assetTrade.value;
   if (selectedAsset.value?.type === "rdpu") {
-    return { quantity: "0", amount: String(amount || "0") };
+    return { quantity: String(quantity || "0"), amount: String(amount || "0") };
   }
   const calcMode = assetTrade.value.calc_mode;
   const priceUnit =
@@ -326,18 +337,21 @@ async function fetchAll() {
       assetRes,
       fundingSummaryRes,
       cashAllocationRes,
+      consistencyRes,
     ] = await Promise.all([
       api.get("/api/goals"),
       api.get("/api/accounts"),
       api.get("/api/assets"),
       api.get("/api/goals/funding-summary"),
       api.get("/api/cash-allocations/accounts"),
+      api.get("/api/assets/saving-consistency").catch(() => ({ data: { data: savingConsistency.value } })),
     ]);
     goals.value = goalRes.data.data || [];
     accounts.value = accountRes.data.data || [];
     assets.value = assetRes.data.data || [];
     goalFundingSummaries.value = fundingSummaryRes.data.data || [];
     cashAllocationSummary.value = cashAllocationRes.data.data || [];
+    savingConsistency.value = consistencyRes.data.data || savingConsistency.value;
     if (selectedGoalId.value) await fetchGoalDetails();
   } catch (err) {
     error.value = normalizeError(
@@ -349,9 +363,25 @@ async function fetchAll() {
   }
 }
 
+async function saveMonthlyTarget() {
+  if (busy.value || !monthlyTargetForm.value.amount) return;
+  busy.value = true;
+  try {
+    await api.put("/api/assets/saving-consistency/target", monthlyTargetForm.value);
+    monthlyTargetForm.value.amount = "";
+    const { data } = await api.get("/api/assets/saving-consistency");
+    savingConsistency.value = data.data;
+    notify.notify({ message: "Target investasi bulanan disimpan.", type: "success" });
+  } catch (err) {
+    notifyError(err, "Target investasi bulanan gagal disimpan.");
+  } finally {
+    busy.value = false;
+  }
+}
+
 function onAssetTradeTypeChange() {
   if (selectedAsset.value?.type === "gold") return;
-  assetTrade.value.calc_mode = "";
+  assetTrade.value.calc_mode = "actual";
   assetTrade.value.unit_price = "";
   assetTrade.value.quantity = "";
 }
@@ -405,7 +435,7 @@ async function refreshAll() {
   await fetchAll();
 }
 watch(selectedAssetId, () => {
-  if (selectedAsset.value)
+  if (selectedAsset.value) {
     pendingForm.value = {
       quantity: selectedAsset.value.quantity,
       unit_price:
@@ -417,6 +447,10 @@ watch(selectedAssetId, () => {
       cash_account_id: "",
       cash_debited: true,
     };
+    if (selectedAsset.value.valuation_mode === 'value_only') {
+      completeUnitsForm.value = { quantity: "", current_value: selectedAsset.value.manual_balance, nav: "", cost_basis: "", captured_at: localDate() };
+    }
+  }
 });
 watch(
   () => [
@@ -464,6 +498,10 @@ watch(
   () => {
     assetAllocation.value.idempotency_key = null;
   },
+);
+watch(
+  () => JSON.stringify({ reconcile_opening: historicalImport.value.reconcile_opening, transactions: historicalImport.value.transactions }),
+  () => { historicalImport.value.idempotency_key = null; },
 );
 
 async function createGoal() {
@@ -654,9 +692,19 @@ async function createAsset() {
       identifier: "",
       storage_type: "",
       ownership_source: "",
+      opening_mode: "units",
       initial_quantity: "",
       initial_cost_basis: "",
+      initial_current_value: "",
+      initial_nav: "",
       initial_date: localDate(),
+      purchase_amount: "",
+      purchase_quantity: "",
+      purchase_status: "pending",
+      purchase_cash_account_id: "",
+      purchase_cash_debited: true,
+      purchase_fees: "0",
+      purchase_date: localDate(),
     };
     await refreshAll();
     notify.notify({ message: "Aset berhasil ditambahkan.", type: "success" });
@@ -671,13 +719,13 @@ async function recordTrade() {
   if (busy.value || !selectedAsset.value) return;
   if (
     compareDecimal(tradePreview.value.amount, "0.00") <= 0 ||
-    (selectedAsset.value.type === "gold" &&
+    ((selectedAsset.value.type === "gold" || assetTrade.value.type === "sale" || assetTrade.value.status === "confirmed") &&
       compareDecimal(tradePreview.value.quantity, "0.00000000", 8) <= 0)
   ) {
     notify.notify({
       message:
         selectedAsset.value.type === "rdpu"
-          ? "Isi nominal transaksi yang valid."
+          ? "Isi nominal dan jumlah unit aktual transaksi RDPU."
           : "Isi nominal dan jumlah gram transaksi yang valid.",
       type: "error",
     });
@@ -687,6 +735,7 @@ async function recordTrade() {
   try {
     const payload = {
       ...assetTrade.value,
+      cash_debited: assetTrade.value.cash_debited,
       amount: tradePreview.value.amount,
       price_unit_grams:
         selectedAsset.value.type === "gold"
@@ -708,8 +757,12 @@ async function recordTrade() {
     if (selectedAsset.value.type === "gold") {
       payload.quantity = tradePreview.value.quantity;
     } else {
-      delete payload.quantity;
-      delete payload.unit_price;
+      if (assetTrade.value.type === "purchase" && assetTrade.value.status === "pending") {
+        delete payload.quantity;
+        delete payload.unit_price;
+      } else {
+        payload.quantity = tradePreview.value.quantity;
+      }
       delete payload.calc_mode;
     }
     delete payload.calc_mode;
@@ -725,6 +778,7 @@ async function recordTrade() {
     );
     assetTrade.value = {
       ...assetTrade.value,
+      form_mode: "simple",
       amount: "",
       quantity: "",
       unit_price: "",
@@ -759,6 +813,44 @@ async function savePrice() {
   }
 }
 
+async function completeRdpuUnits() {
+  if (busy.value || !selectedAsset.value) return;
+  busy.value = true;
+  try {
+    await api.post(`/api/assets/${selectedAsset.value.id}/complete-units`, completeUnitsForm.value);
+    await refreshAll();
+    notify.notify({ message: "Unit RDPU dilengkapi dan nilai lama direkonsiliasi tanpa mengubah saldo rekening.", type: "success" });
+  } catch (err) {
+    notifyError(err, "Unit RDPU gagal dilengkapi.");
+  } finally {
+    busy.value = false;
+  }
+}
+
+function addHistoryRow() {
+  historicalImport.value.transactions.push({ action: "purchase", transaction_date: localDate(), amount: "", quantity: "", unit_price: "", fees: "0", notes: "" });
+}
+
+function removeHistoryRow(index) {
+  if (historicalImport.value.transactions.length > 1) historicalImport.value.transactions.splice(index, 1);
+}
+
+async function importAssetHistory() {
+  if (busy.value || !selectedAsset.value) return;
+  busy.value = true;
+  try {
+    if (!historicalImport.value.idempotency_key) historicalImport.value.idempotency_key = newIdempotencyKey();
+    await api.post(`/api/assets/${selectedAsset.value.id}/transactions/import`, historicalImport.value);
+    historicalImport.value = { reconcile_opening: false, idempotency_key: null, transactions: [{ action: "purchase", transaction_date: localDate(), amount: "", quantity: "", unit_price: "", fees: "0", notes: "" }] };
+    await refreshAll();
+    notify.notify({ message: "Histori pembelian berhasil diimpor tanpa mengubah saldo rekening.", type: "success" });
+  } catch (err) {
+    notifyError(err, "Histori transaksi gagal diimpor.");
+  } finally {
+    busy.value = false;
+  }
+}
+
 async function allocateAsset() {
   if (busy.value || !selectedAsset.value || !assetAllocation.value.goal_id)
     return;
@@ -780,6 +872,23 @@ async function allocateAsset() {
     });
   } catch (err) {
     notifyError(err, "Aset gagal dialokasikan.");
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function allocateGoalAsset() {
+  if (busy.value || !selectedGoalId.value || !goalAssetAllocation.value.asset_id) return;
+  busy.value = true;
+  try {
+    const payload = { quantity: goalAssetAllocation.value.quantity, action: goalAssetAllocation.value.action, idempotency_key: newIdempotencyKey() };
+    await api.post(`/api/goals/${selectedGoalId.value}/assets/${goalAssetAllocation.value.asset_id}/allocations`, payload);
+    goalAssetAllocation.value.quantity = "";
+    await refreshAll();
+    await fetchGoalDetails();
+    notify.notify({ message: "Aset berhasil dialokasikan ke target.", type: "success" });
+  } catch (err) {
+    notifyError(err, "Alokasi aset gagal disimpan.");
   } finally {
     busy.value = false;
   }
@@ -809,7 +918,9 @@ async function transitionAsset(tx, status) {
 }
 
 onMounted(async () => {
-  if (route.query.tab === "assets") tab.value = "assets";
+  if (route.query.tab === "assets" && route.path === "/goals") {
+    await router.replace("/assets");
+  }
   await fetchAll();
 });
 </script>
@@ -819,36 +930,29 @@ onMounted(async () => {
     <header class="financial-page-header">
       <div class="financial-page-title">
         <p class="eyebrow">Perencanaan keuangan</p>
-        <h1>Target & aset</h1>
+        <h1>{{ tab === "goals" ? "Target tabungan" : "Aset investasi" }}</h1>
         <p class="text-sm text-ink-500">
-          Rencanakan kebutuhan, cadangkan dana, dan pantau aset dari satu
-          tempat.
+          {{ tab === "goals" ? "Rencanakan kebutuhan, siapkan pendanaan, dan pantau progres target Anda." : "Pantau nilai, riwayat, dan perkembangan aset investasi Anda." }}
         </p>
       </div>
-      <div
-        class="financial-tabs"
-        role="tablist"
-        aria-label="Bagian perencanaan"
-      >
-        <button
-          role="tab"
-          :aria-selected="tab === 'goals'"
+      <nav class="financial-tabs" aria-label="Halaman perencanaan keuangan">
+        <router-link
+          to="/goals"
           class="financial-tab"
           :class="{ 'is-active': tab === 'goals' }"
-          @click="switchTab('goals')"
+          :aria-current="tab === 'goals' ? 'page' : undefined"
         >
-          Target
-        </button>
-        <button
-          role="tab"
-          :aria-selected="tab === 'assets'"
+          Target tabungan
+        </router-link>
+        <router-link
+          to="/assets"
           class="financial-tab"
           :class="{ 'is-active': tab === 'assets' }"
-          @click="switchTab('assets')"
+          :aria-current="tab === 'assets' ? 'page' : undefined"
         >
-          Aset
-        </button>
-      </div>
+          Aset investasi
+        </router-link>
+      </nav>
     </header>
 
     <div
@@ -1259,7 +1363,7 @@ onMounted(async () => {
                   </button>
                 </div>
               </div>
-              <details class="workspace-form-disclosure">
+              <details v-if="selectedAsset.valuation_mode !== 'value_only'" class="workspace-form-disclosure">
                 <summary>Tambah rincian kebutuhan</summary>
                 <form
                   class="mt-4 grid gap-2 sm:grid-cols-[1fr_95px_130px_auto]"
@@ -1527,6 +1631,19 @@ onMounted(async () => {
                 {{ formatRupiah(funding.allocated_assets_value) }}.
               </p>
             </article>
+            <article class="surface-card p-5 sm:col-span-2">
+              <h3 class="font-bold">Sisihkan aset untuk {{ selectedGoal.name }}</h3>
+              <p class="mt-1 text-xs text-ink-500">Pilih gram emas atau unit RDPU yang tersedia. Nilai aset mengikuti valuasi, sementara kuantitas yang dialokasikan tetap.</p>
+              <form class="mt-3 grid gap-2 sm:grid-cols-[1.2fr_1fr_1fr_auto]" @submit.prevent="allocateGoalAsset">
+                <label class="financial-field">Aset<select v-model="goalAssetAllocation.asset_id" required><option value="" disabled>-- Pilih aset --</option><option v-for="asset in assets" :key="asset.id" :value="asset.id" :disabled="asset.valuation_mode === 'value_only'">{{ asset.name }} · {{ asset.type === 'gold' ? `${formatQuantity(asset.quantity)} gram` : asset.valuation_mode === 'value_only' ? 'Unit belum diketahui' : `${formatQuantity(asset.quantity)} unit` }}</option></select></label>
+                <label class="financial-field">Jumlah<MoneyInput v-model="goalAssetAllocation.quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" placeholder="Gram / unit" required /></label>
+                <label class="financial-field">Tindakan<select v-model="goalAssetAllocation.action" required><option value="allocate">Sisihkan untuk target</option><option value="release">Kurangi alokasi</option></select></label>
+                <button class="primary-button self-end" :disabled="busy">Simpan</button>
+              </form>
+              <div v-if="funding?.allocated_assets?.length" class="mt-4 divide-y divide-line-200">
+                <div v-for="row in funding.allocated_assets" :key="row.asset_id" class="flex flex-wrap justify-between gap-2 py-2 text-sm"><span>{{ row.name }} · {{ formatQuantity(row.quantity) }} {{ row.type === 'gold' ? 'gram' : 'unit' }}</span><b>{{ row.value == null ? 'Valuasi belum tersedia' : formatRupiah(row.value) }}</b></div>
+              </div>
+            </article>
           </section>
         </div>
         <div v-else class="surface-card p-8 text-center text-sm text-ink-500">
@@ -1549,28 +1666,29 @@ onMounted(async () => {
           }}</b>
         </article>
         <article class="surface-card asset-summary-card">
-          <p>Modal tersisa</p>
+          <p>Modal tercatat</p>
           <b>{{
-            formatRupiah(
+            allAssetBasisKnown ? formatRupiah(
               assets.reduce(
                 (sum, a) => addDecimal(sum, a.cost_basis || 0),
                 "0.00",
               ),
-            )
+            ) : "Sebagian belum diketahui"
           }}</b>
         </article>
         <article class="surface-card asset-summary-card">
           <p>Keuntungan / kerugian belum terealisasi</p>
           <b>{{
-            formatRupiah(
+            allAssetBasisKnown ? formatRupiah(
               assets.reduce(
                 (sum, a) => addDecimal(sum, a.unrealized_profit_loss || 0),
                 "0.00",
               ),
-            )
+            ) : "Belum lengkap"
           }}</b>
         </article>
       </section>
+      <AssetSavingConsistency v-if="!selectedAsset" v-model="monthlyTargetForm" :summary="savingConsistency" :busy="busy" @save="saveMonthlyTarget" />
       <section
         class="asset-workspace-layout"
         :class="selectedAsset ? 'has-selected-asset' : 'is-list-view'"
@@ -1654,10 +1772,7 @@ onMounted(async () => {
                   />
                   <span>
                     <strong>Pembelian baru</strong>
-                    <small
-                      >Aset dibuat dulu, lalu transaksi pembelian dicatat dari
-                      detail aset.</small
-                    >
+                    <small>Pembelian pertama dicatat sekaligus saat aset dibuat.</small>
                   </span>
                 </label>
               </fieldset>
@@ -1665,36 +1780,47 @@ onMounted(async () => {
                 v-if="assetForm.ownership_source === 'existing'"
                 class="asset-opening-fields"
               >
-                <label v-if="assetForm.type === 'gold'" class="financial-field">
-                  {{ "Jumlah kepemilikan (gram)" }}
+                <label v-if="assetForm.type === 'rdpu'" class="financial-field">
+                  Data yang kamu ketahui<select v-model="assetForm.opening_mode" required>
+                    <option value="units">Jumlah unit penyertaan</option>
+                    <option value="value_only">Hanya nilai portofolio</option>
+                  </select>
+                  <small class="asset-opening-help">Jika unit belum diketahui, Ledger mencatat nilai sementara tanpa membuat unit fiktif.</small>
+                </label>
+                <label v-if="assetForm.type === 'gold' || (assetForm.type === 'rdpu' && assetForm.opening_mode === 'units')" class="financial-field">
+                  {{ assetForm.type === 'gold' ? "Jumlah kepemilikan (gram)" : "Unit penyertaan yang dimiliki" }}
                   <MoneyInput
                     v-model="assetForm.initial_quantity"
                     min="0.00000001"
                     step="0.00000001"
                     :precision="8"
                     :show-prefix="false"
-                    placeholder="Contoh: 5 atau 0,5"
+                    :placeholder="assetForm.type === 'gold' ? 'Contoh: 5 atau 0,5 gram' : 'Masukkan unit dari aplikasi investasi'"
                     required
                   />
                 </label>
+                <label v-if="assetForm.type === 'rdpu' && assetForm.opening_mode === 'value_only'" class="financial-field">
+                  Nilai portofolio saat ini
+                  <MoneyInput v-model="assetForm.initial_current_value" min="0.01" step="0.01" placeholder="Nilai yang terlihat di aplikasi" required />
+                </label>
                 <label class="financial-field">
                   {{
-                    assetForm.type === "rdpu"
-                      ? "Nilai portofolio saat mulai dicatat"
-                      : "Total modal perolehan"
+                    "Total modal historis (jika diketahui)"
                   }}
                   <MoneyInput
                     v-model="assetForm.initial_cost_basis"
-                    min="0.01"
+                    min="0"
                     step="0.01"
-                    placeholder="Contoh: 5000000"
-                    required
+                    placeholder="Kosongkan jika tidak diketahui"
                   />
                   <small class="asset-opening-help">{{
                     assetForm.type === "rdpu"
-                      ? "Nilai ini menjadi titik awal pemantauan. Perubahan nilai dihitung sejak aset mulai dicatat di Ledger."
-                      : "Masukkan total harga perolehan. Nilai ini menjadi modal awal aset."
+                      ? "Modal yang tidak diketahui akan ditandai belum lengkap, bukan dianggap Rp0 untuk menghitung untung/rugi."
+                      : "Jika tidak diketahui, Ledger tidak akan menampilkan untung/rugi sampai modal dilengkapi."
                   }}</small>
+                </label>
+                <label v-if="assetForm.type === 'rdpu' && assetForm.opening_mode === 'units'" class="financial-field">
+                  NAB terbaru (opsional)<MoneyInput v-model="assetForm.initial_nav" min="0.00000001" step="0.00000001" :precision="8" placeholder="NAB per unit jika tersedia" />
                 </label>
                 <label class="financial-field">
                   Tanggal saldo awal
@@ -1709,11 +1835,20 @@ onMounted(async () => {
                   transaksi keluar dari rekening.
                 </p>
               </div>
+              <div v-if="assetForm.ownership_source === 'new'" class="asset-opening-fields">
+                <label class="financial-field">Nominal pembelian<MoneyInput v-model="assetForm.purchase_amount" min="1" step="1" placeholder="Jumlah uang yang dibayar" required /></label>
+                <label v-if="assetForm.type === 'gold' || (assetForm.type === 'rdpu' && assetForm.purchase_status === 'confirmed')" class="financial-field">{{ assetForm.type === 'gold' ? 'Gram yang diterima' : 'Unit penyertaan aktual' }}<MoneyInput v-model="assetForm.purchase_quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" :placeholder="assetForm.type === 'gold' ? 'Contoh: 0,5 gram' : 'Unit pada bukti transaksi'" required /></label>
+                <label v-if="assetForm.type === 'rdpu'" class="financial-field">Status pembelian<select v-model="assetForm.purchase_status" required><option value="pending">Belum dikonfirmasi</option><option value="confirmed">Sudah dikonfirmasi</option></select></label>
+                <label class="financial-field">Rekening sumber<select v-model="assetForm.purchase_cash_account_id" :required="assetForm.type === 'gold' || assetForm.purchase_status === 'confirmed' || assetForm.purchase_cash_debited"><option value="">-- Pilih rekening --</option><option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }} · {{ formatRupiah(account.balance) }}</option></select></label>
+                <label v-if="assetForm.type === 'rdpu' && assetForm.purchase_status === 'pending'" class="flex items-center gap-2 text-sm"><input v-model="assetForm.purchase_cash_debited" type="checkbox" />Dana sudah keluar dari rekening</label>
+                <label class="financial-field">Tanggal transaksi<input v-model="assetForm.purchase_date" type="date" required /></label>
+                <p v-if="assetForm.type === 'rdpu' && assetForm.purchase_status === 'pending'" class="asset-opening-notice">Unit akan dicatat setelah pembelian dikonfirmasi.</p>
+              </div>
               <button
                 class="primary-button w-full"
                 :disabled="busy || !assetForm.ownership_source"
               >
-                Buat aset
+                {{ assetForm.ownership_source === 'new' ? 'Buat aset & catat pembelian' : 'Tambahkan aset yang sudah dimiliki' }}
               </button>
             </form>
           </article>
@@ -1779,7 +1914,9 @@ onMounted(async () => {
                 <div class="asset-portfolio-card-footer">
                   <span>{{
                     asset.type === "rdpu"
-                      ? `Modal tercatat ${formatRupiah(asset.cost_basis)}`
+                      ? asset.valuation_mode === 'value_only'
+                        ? `Nilai sementara ${formatRupiah(asset.manual_balance)}`
+                        : `${formatQuantity(asset.quantity)} unit · modal ${asset.cost_basis_known ? formatRupiah(asset.cost_basis) : 'belum diketahui'}`
                       : `${formatQuantity(asset.quantity)} ${asset.type === "gold" ? "gram" : "unit"}`
                   }}</span>
                   <span
@@ -1852,12 +1989,12 @@ onMounted(async () => {
               </div>
               <div class="asset-detail-holding">
                 <b>{{
-                  selectedAsset.type === "rdpu"
-                    ? `Modal tercatat ${formatRupiah(selectedAsset.cost_basis)}`
+                  selectedAsset.type === "rdpu" && selectedAsset.valuation_mode === 'value_only'
+                    ? `Nilai sementara ${formatRupiah(selectedAsset.manual_balance)}`
                     : `${formatQuantity(selectedAsset.quantity)} ${selectedAsset.type === "gold" ? "gram" : "unit"}`
                 }}</b>
                 <p v-if="selectedAsset.type === 'gold'">
-                  Modal {{ formatRupiah(selectedAsset.cost_basis) }}
+                  {{ selectedAsset.cost_basis_known ? `Modal ${formatRupiah(selectedAsset.cost_basis)}` : "Modal historis belum diketahui" }}
                 </p>
               </div>
             </div>
@@ -1874,14 +2011,14 @@ onMounted(async () => {
                 <small>{{
                   selectedAsset.type === "gold"
                     ? "Harga buyback/gram"
-                    : "Metode valuasi"
+                    : (selectedAsset.valuation_mode === 'value_only' ? "Metode valuasi" : "NAB per unit")
                 }}</small>
                 <b>{{
                   selectedAsset.type === "gold"
                     ? selectedAsset.latest_price
                       ? formatRupiah(selectedAsset.latest_price)
                       : "Belum dicatat"
-                    : "Manual"
+                    : (selectedAsset.valuation_mode === 'value_only' ? "Nilai sementara" : (selectedAsset.latest_price ? formatRupiah(selectedAsset.latest_price) : "Belum dicatat"))
                 }}</b>
               </div>
               <div>
@@ -1903,11 +2040,23 @@ onMounted(async () => {
                 }}</b>
               </div>
             </div>
+            <details v-if="selectedAsset.type === 'rdpu' && selectedAsset.valuation_mode === 'value_only'" class="workspace-form-disclosure">
+              <summary>Lengkapi unit penyertaan RDPU</summary>
+              <p class="mt-2 text-xs text-ink-500">Masukkan unit aktual dari aplikasi investasi. Nilai lama akan diganti dengan valuasi unit × NAB; histori lama tetap tersimpan sebagai jejak audit.</p>
+              <form class="asset-price-form" @submit.prevent="completeRdpuUnits">
+                <label class="financial-field">Unit penyertaan aktual<MoneyInput v-model="completeUnitsForm.quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" placeholder="Unit pada aplikasi" required /></label>
+                <label class="financial-field">Nilai portofolio saat ini<MoneyInput v-model="completeUnitsForm.current_value" min="0.01" step="0.01" placeholder="Nilai terkini" required /></label>
+                <label class="financial-field">NAB terbaru (opsional)<MoneyInput v-model="completeUnitsForm.nav" min="0.00000001" step="0.00000001" :precision="8" placeholder="Kosongkan untuk dihitung dari nilai ÷ unit" /></label>
+                <label class="financial-field">Total modal historis (jika diketahui)<MoneyInput v-model="completeUnitsForm.cost_basis" min="0.01" step="0.01" placeholder="Kosongkan jika tidak diketahui" /></label>
+                <label class="financial-field">Tanggal valuasi<input v-model="completeUnitsForm.captured_at" type="date" required /></label>
+                <button class="primary-button" :disabled="busy">Simpan unit aktual</button>
+              </form>
+            </details>
             <details class="workspace-form-disclosure">
               <summary>
                 {{
                   selectedAsset.type === "rdpu"
-                    ? "Perbarui nilai portofolio"
+                    ? (selectedAsset.valuation_mode === 'value_only' ? "Perbarui nilai portofolio sementara" : "Perbarui NAB")
                     : "Perbarui harga buyback"
                 }}
               </summary>
@@ -1916,16 +2065,16 @@ onMounted(async () => {
                   >{{
                     selectedAsset.type === "gold"
                       ? "Harga buyback per gram"
-                      : "Total nilai portofolio saat ini"
+                      : (selectedAsset.valuation_mode === 'value_only' ? "Total nilai portofolio saat ini" : "NAB terbaru per unit")
                   }}<MoneyInput
                     v-model="priceForm.price"
-                    :min="selectedAsset.type === 'gold' ? '0.00000001' : '0.01'"
+                    :min="selectedAsset.type === 'gold' || selectedAsset.valuation_mode !== 'value_only' ? '0.00000001' : '0.01'"
                     :step="
-                      selectedAsset.type === 'gold' ? '0.00000001' : '0.01'
+                      selectedAsset.type === 'gold' || selectedAsset.valuation_mode !== 'value_only' ? '0.00000001' : '0.01'
                     "
-                    :precision="selectedAsset.type === 'gold' ? 8 : 2"
+                    :precision="selectedAsset.type === 'gold' || selectedAsset.valuation_mode !== 'value_only' ? 8 : 2"
                     required /></label
-                ><label class="financial-field"
+              ><label class="financial-field"
                   >Tanggal valuasi<input
                     v-model="priceForm.captured_at"
                     type="date"
@@ -1937,7 +2086,7 @@ onMounted(async () => {
                 ><button class="primary-button" :disabled="busy">
                   {{
                     selectedAsset.type === "rdpu"
-                      ? "Simpan nilai portofolio"
+                    ? (selectedAsset.valuation_mode === 'value_only' ? "Simpan nilai portofolio" : "Simpan NAB")
                       : "Simpan valuasi"
                   }}
                 </button>
@@ -1945,7 +2094,7 @@ onMounted(async () => {
               <p class="mt-2 text-xs text-ink-500">
                 {{
                   selectedAsset.type === "rdpu"
-                    ? "Masukkan nilai total yang terlihat di aplikasi investasi. Ledger menghitung perubahan terhadap modal tercatat."
+                    ? (selectedAsset.valuation_mode === 'value_only' ? "Nilai sementara ini tidak digunakan untuk membuat unit. Tambahkan unit saat datanya tersedia." : "Masukkan NAB terbaru per unit. Nilai portofolio dihitung dari unit terkonfirmasi × NAB.")
                     : "Nilai estimasi mengikuti harga buyback terbaru yang Anda catat."
                 }}
               </p>
@@ -1954,7 +2103,8 @@ onMounted(async () => {
           <section class="grid gap-4 lg:grid-cols-2">
             <article class="surface-card p-5">
               <h3 class="font-bold">Catat transaksi aset</h3>
-              <details class="workspace-form-disclosure">
+              <p v-if="selectedAsset.valuation_mode === 'value_only'" class="mt-2 rounded-xl bg-base-50 p-3 text-sm text-ink-600">Aset ini hanya memiliki nilai portofolio sementara, tanpa unit yang diketahui. Perbarui nilainya di atas atau lengkapi unit dari menu edit aset sebelum mencatat transaksi.</p>
+              <details v-else class="workspace-form-disclosure">
                 <summary>Catat pembelian atau pencairan</summary>
                 <form class="asset-trade-form" @submit.prevent="recordTrade">
                   <label class="financial-field"
@@ -1982,8 +2132,9 @@ onMounted(async () => {
                       </option>
                     </select></label
                   >
+                  <label class="financial-field">Mode input<select v-model="assetTrade.form_mode"><option value="simple">Sederhana</option><option value="detailed">Detail</option></select></label>
                   <label
-                    v-if="selectedAsset.type === 'gold'"
+                    v-if="assetTrade.form_mode === 'detailed' && selectedAsset.type === 'gold'"
                     class="financial-field"
                     >Cara hitung<select v-model="assetTrade.calc_mode" required>
                       <option value="" disabled>-- Pilih cara hitung --</option>
@@ -2066,7 +2217,7 @@ onMounted(async () => {
                       "
                   /></label>
                   <label
-                    v-if="selectedAsset.type === 'gold'"
+                    v-if="selectedAsset.type === 'gold' || (selectedAsset.type === 'rdpu' && (assetTrade.type === 'sale' || assetTrade.status === 'confirmed'))"
                     class="financial-field"
                     >{{
                       selectedAsset.type === "gold"
@@ -2083,9 +2234,9 @@ onMounted(async () => {
                       "
                   /></label>
                   <label
-                    v-if="selectedAsset.type === 'gold'"
+                    v-if="assetTrade.form_mode === 'detailed' && (selectedAsset.type === 'gold' || (selectedAsset.type === 'rdpu' && assetTrade.type === 'purchase' && assetTrade.status === 'confirmed'))"
                     class="financial-field"
-                    >{{ "Harga satuan"
+                    >{{ selectedAsset.type === 'gold' ? "Harga satuan" : "NAB saat pembelian (opsional)"
                     }}<MoneyInput
                       v-model="assetTrade.unit_price"
                       min="0.00000001"
@@ -2094,7 +2245,7 @@ onMounted(async () => {
                       :placeholder="'Harga per satuan harga'"
                   /></label>
                   <label
-                    v-if="selectedAsset.type === 'gold'"
+                    v-if="assetTrade.form_mode === 'detailed' && selectedAsset.type === 'gold'"
                     class="financial-field"
                     >Basis harga<select
                       v-model="assetTrade.price_unit_grams"
@@ -2109,7 +2260,7 @@ onMounted(async () => {
                   >
                   <label
                     v-if="
-                      selectedAsset.type === 'gold' &&
+                      assetTrade.form_mode === 'detailed' && selectedAsset.type === 'gold' &&
                       assetTrade.price_unit_grams === 'custom'
                     "
                     class="financial-field"
@@ -2121,7 +2272,7 @@ onMounted(async () => {
                       :show-prefix="false"
                       placeholder="Contoh: 0,5"
                   /></label>
-                  <label class="financial-field"
+                  <label v-if="assetTrade.form_mode === 'detailed'" class="financial-field"
                     >Biaya transaksi<MoneyInput
                       v-model="assetTrade.fees"
                       min="0"
@@ -2148,7 +2299,7 @@ onMounted(async () => {
                   >
                   <div
                     v-if="selectedAsset.type === 'gold'"
-                    class="asset-trade-preview"
+                class="asset-trade-preview"
                   >
                     Pratinjau: {{ formatQuantity(tradePreview.quantity) }} gram
                     · {{ formatRupiah(tradePreview.amount) }}
@@ -2185,17 +2336,35 @@ onMounted(async () => {
                   dicatat.
                 </p>
               </details>
+              <details v-if="selectedAsset.valuation_mode !== 'value_only'" class="workspace-form-disclosure">
+                <summary>Impor histori investasi</summary>
+                <p class="mt-2 text-xs text-ink-500">Masukkan pembelian dan penjualan lama dalam urutan tanggal. Histori tidak membuat arus kas saat ini. Jika ada saldo awal, saldo unit akhirnya harus sama.</p>
+                <label v-if="(selectedAsset.transactions || []).some(tx => tx.origin === 'opening' && !tx.superseded_at)" class="mt-3 flex items-start gap-2 rounded-xl bg-base-50 p-3 text-sm"><input v-model="historicalImport.reconcile_opening" type="checkbox" required /><span>Ganti saldo awal dengan rincian pembelian lama yang saya masukkan.</span></label>
+                <form class="mt-3 grid gap-3" @submit.prevent="importAssetHistory">
+                  <div v-for="(row, index) in historicalImport.transactions" :key="index" class="grid gap-2 rounded-xl border border-line-200 p-3 sm:grid-cols-2">
+                    <label class="financial-field">Aktivitas<select v-model="row.action"><option value="purchase">Pembelian</option><option value="sale">{{ selectedAsset.type === 'gold' ? 'Penjualan' : 'Pencairan' }}</option></select></label>
+                    <label class="financial-field">Tanggal pembelian<input v-model="row.transaction_date" type="date" required /></label>
+                    <label class="financial-field">{{ row.action === 'purchase' ? (selectedAsset.type === 'gold' ? 'Nominal pembelian' : 'Nominal investasi') : 'Hasil penjualan/pencairan' }}<MoneyInput v-model="row.amount" min="0.01" step="0.01" placeholder="Nominal aktual" required /></label>
+                    <label class="financial-field">{{ row.action === 'purchase' ? (selectedAsset.type === 'gold' ? 'Gram diterima' : 'Unit dibeli') : (selectedAsset.type === 'gold' ? 'Gram dijual' : 'Unit dicairkan') }}<MoneyInput v-model="row.quantity" min="0.00000001" step="0.00000001" :precision="8" :show-prefix="false" placeholder="Jumlah aktual" required /></label>
+                    <label class="financial-field">Harga per gram / NAB per unit (opsional)<MoneyInput v-model="row.unit_price" min="0.00000001" step="0.00000001" :precision="8" placeholder="Otomatis dari nominal ÷ jumlah" /></label>
+                    <label class="financial-field">Biaya transaksi<MoneyInput v-model="row.fees" min="0" step="0.01" placeholder="0" /></label>
+                    <label class="financial-field">Catatan<input v-model="row.notes" placeholder="Opsional" /></label>
+                    <button v-if="historicalImport.transactions.length > 1" type="button" class="secondary-button sm:col-span-2" @click="removeHistoryRow(index)">Hapus baris ini</button>
+                  </div>
+                  <div class="flex flex-wrap gap-2"><button type="button" class="secondary-button" @click="addHistoryRow">Tambah transaksi lama</button><button class="primary-button" :disabled="busy">Impor {{ historicalImport.transactions.length }} transaksi</button></div>
+                </form>
+              </details>
             </article>
             <article class="surface-card p-5">
               <h3 class="font-bold">Alokasikan aset ke target</h3>
               <p class="mt-1 text-xs text-ink-500">
                 {{
                   selectedAsset.type === "rdpu"
-                    ? "Nominal RDPU dicadangkan untuk target."
+                    ? "Unit RDPU dicadangkan untuk target."
                     : "Jumlah emas dicadangkan untuk target sesuai valuasi terbaru."
                 }}
               </p>
-              <details class="workspace-form-disclosure">
+              <details v-if="selectedAsset.valuation_mode !== 'value_only'" class="workspace-form-disclosure">
                 <summary>Alokasikan aset ke target</summary>
                 <form
                   class="mt-3 grid gap-2 sm:grid-cols-2"
@@ -2217,17 +2386,15 @@ onMounted(async () => {
                     </option></select
                   ><MoneyInput
                     v-model="assetAllocation.quantity"
-                    :min="selectedAsset.type === 'rdpu' ? '0.01' : '0.00000001'"
-                    :step="
-                      selectedAsset.type === 'rdpu' ? '0.01' : '0.00000001'
-                    "
-                    :precision="selectedAsset.type === 'rdpu' ? 2 : 8"
-                    :show-prefix="selectedAsset.type === 'rdpu'"
+                    min="0.00000001"
+                    step="0.00000001"
+                    :precision="8"
+                    :show-prefix="false"
                     required
                     aria-label="Jumlah aset untuk dialokasikan"
                     class="rounded-xl border border-line-200 bg-paper-0 px-3 py-2 text-sm"
                     :placeholder="
-                      selectedAsset.type === 'gold' ? 'Gram' : 'Nominal alokasi'
+                      selectedAsset.type === 'gold' ? 'Gram' : 'Unit penyertaan'
                     "
                   /><select
                     v-model="assetAllocation.action"
@@ -2245,17 +2412,18 @@ onMounted(async () => {
                   </button>
                 </form>
               </details>
-              <div class="mt-4 rounded-xl bg-base-50 p-3 text-xs">
+              <p v-if="selectedAsset.valuation_mode === 'value_only'" class="mt-3 rounded-xl bg-base-50 p-3 text-xs">Alokasi target membutuhkan gram atau unit yang benar. Aset nilai sementara belum bisa dialokasikan secara kuantitas.</p>
+              <div v-if="selectedAsset.valuation_mode !== 'value_only'" class="mt-4 rounded-xl bg-base-50 p-3 text-xs">
                 Dialokasikan:
                 <b>{{
                   selectedAsset.type === "rdpu"
-                    ? formatRupiah(selectedAsset.manual_allocated)
+                    ? `${formatQuantity(selectedAsset.allocated_quantity)} unit`
                     : `${formatQuantity(selectedAsset.allocated_quantity)} gram`
                 }}</b>
                 · Belum dialokasikan:
                 <b>{{
                   selectedAsset.type === "rdpu"
-                    ? formatRupiah(selectedAsset.manual_unallocated)
+                    ? `${formatQuantity(selectedAsset.unallocated_quantity)} unit`
                     : `${formatQuantity(selectedAsset.unallocated_quantity)} gram`
                 }}</b>
               </div>
@@ -2267,13 +2435,14 @@ onMounted(async () => {
                   class="mt-2 rounded-xl border border-line-200 p-3 text-xs"
                 >
                   <div class="flex justify-between">
-                    <b>{{ tx.type }} · {{ tx.status }}</b
+                    <b>{{ tx.type === 'purchase' || tx.type === 'subscription' ? (selectedAsset.type === 'gold' ? 'Pembelian' : 'Pembelian RDPU') : (selectedAsset.type === 'gold' ? 'Penjualan' : 'Pencairan') }} · {{ tx.status }} · {{ tx.origin === 'opening' ? 'Saldo awal' : tx.origin === 'historical' ? 'Impor histori' : 'Transaksi baru' }}</b
                     ><span>{{ tx.transaction_date }}</span>
                   </div>
                   <p class="mt-1">
                     <template v-if="selectedAsset.type === 'rdpu'">
-                      {{ tx.type === "redemption" ? "Pencairan" : "Nominal" }}
-                      {{ formatRupiah(tx.amount) }}
+                      {{ tx.type === "redemption" ? "Pencairan" : "Nominal beli" }} {{ formatRupiah(tx.amount) }}
+                      <span v-if="Number(tx.quantity) > 0"> · {{ formatQuantity(tx.quantity) }} unit</span>
+                      <span v-if="Number(tx.unit_price) > 0"> · NAB {{ formatRupiah(tx.unit_price) }}/unit</span>
                     </template>
                     <template v-else>
                       {{ formatQuantity(tx.quantity) }} gram ·
@@ -2300,6 +2469,7 @@ onMounted(async () => {
                       step="0.00000001"
                       :precision="8"
                       :show-prefix="false"
+                      required
                       class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                       aria-label="Jumlah gram aktual"
                       placeholder="Gram dijual"
@@ -2326,6 +2496,18 @@ onMounted(async () => {
                       class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
                       aria-label="Jumlah gram aktual"
                       placeholder="Gram aktual"
+                    />
+                    <MoneyInput
+                      v-if="tx.type === 'subscription' && selectedAsset.type === 'rdpu' && selectedAsset.valuation_mode !== 'value_only'"
+                      v-model="pendingForm.quantity"
+                      min="0.00000001"
+                      step="0.00000001"
+                      :precision="8"
+                      :show-prefix="false"
+                      required
+                      class="rounded-lg border border-line-200 bg-paper-0 px-2 py-1.5"
+                      aria-label="Unit RDPU aktual"
+                      placeholder="Unit aktual pada bukti transaksi"
                     />
                     <MoneyInput
                       v-if="
@@ -2398,6 +2580,13 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
+              <details v-if="selectedAsset.audit_history?.length" class="workspace-form-disclosure mt-3">
+                <summary>Riwayat yang direkonsiliasi ({{ selectedAsset.audit_history.length }})</summary>
+                <div v-for="entry in selectedAsset.audit_history" :key="entry.id" class="mt-2 rounded-xl border border-line-200 p-3 text-xs text-ink-500">
+                  <div class="flex justify-between gap-2"><b>{{ entry.origin === 'opening' ? 'Saldo awal' : 'Transaksi lama' }} · digantikan saat rekonsiliasi</b><span>{{ entry.transaction_date }}</span></div>
+                  <p class="mt-1">{{ formatQuantity(entry.quantity) }} {{ selectedAsset.type === 'gold' ? 'gram' : 'unit' }} · {{ formatRupiah(entry.amount) }}</p>
+                </div>
+              </details>
             </article>
           </section>
         </div>

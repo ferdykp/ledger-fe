@@ -115,6 +115,12 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: "assets",
+        name: "assets.index",
+        component: Goal,
+        meta: { requiresAuth: true },
+      },
+      {
         path: "report",
         name: "report.index",
         component: Report,
