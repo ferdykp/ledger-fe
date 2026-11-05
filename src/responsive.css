@@ -1675,6 +1675,11 @@ input[type="radio"] {
   background: var(--color-primary-100);
 }
 
+.asset-type-mark.is-deposit {
+  color: #6b4e16;
+  background: #f6edcf;
+}
+
 .asset-identity-copy {
   flex: 1;
 }
